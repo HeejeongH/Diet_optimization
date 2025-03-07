@@ -6,6 +6,25 @@ from evaluation_function import calculate_harmony_matrix, get_top_n_harmony_pair
 from utils import diet_to_dataframe, count_menu_changes
 from spea2_optimizer import SPEA2Optimizer
 from Diet_class import NutrientConstraints
+import os
+
+def get_base_path():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    parent_dir = os.path.dirname(current_dir)
+    data_path = os.path.join(parent_dir, 'data')
+    
+    if os.path.exists(data_path):
+        return parent_dir
+    
+    if os.path.exists(os.path.join(current_dir, 'data')):
+        return current_dir
+    
+    src_parent = os.path.dirname(parent_dir)
+    if os.path.exists(os.path.join(src_parent, 'data')):
+        return src_parent
+    
+    return os.getcwd()
 
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
@@ -121,11 +140,63 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    name = 'sarang'
-    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
-    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+    """데이터 로드 및 처리 함수"""
+    base_path = get_base_path()
     
+    # 가능한 데이터 경로들
+    possible_paths = [
+        os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB'),
+        os.path.join(base_path, 'sarang_DB', 'processed_DB'),
+        os.path.join(base_path, 'processed_DB'),
+        os.path.join(base_path, 'data')
+    ]
+    
+    # 파일 이름
+    diet_file = 'DIET_sarang.xlsx'
+    menu_file = 'Menu_ingredient_nutrient.xlsx'
+    ingre_file = 'Ingredient_Price.xlsx'
+    
+    # 각 경로에서 파일 찾기
+    diet_db_path = None
+    menu_db_path = None
+    ingre_db_path = None
+    
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, diet_file)):
+            diet_db_path = os.path.join(path, diet_file)
+            st.sidebar.success(f"식단 DB 파일을 찾았습니다: {diet_db_path}")
+            break
+    
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, menu_file)):
+            menu_db_path = os.path.join(path, menu_file)
+            st.sidebar.success(f"메뉴 DB 파일을 찾았습니다: {menu_db_path}")
+            break
+            
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, ingre_file)):
+            ingre_db_path = os.path.join(path, ingre_file)
+            st.sidebar.success(f"식재료 DB 파일을 찾았습니다: {ingre_db_path}")
+            break
+    
+    # 파일이 없으면 오류 메시지 표시
+    if not all([diet_db_path, menu_db_path, ingre_db_path]):
+        missing_files = []
+        if not diet_db_path:
+            missing_files.append(diet_file)
+        if not menu_db_path:
+            missing_files.append(menu_file)
+        if not ingre_db_path:
+            missing_files.append(ingre_file)
+            
+        st.error(f"다음 파일을 찾을 수 없습니다: {', '.join(missing_files)}")
+        st.info("파일이 다음 경로 중 하나에 있어야 합니다:")
+        for path in possible_paths:
+            st.info(f"- {path}")
+        
+        raise FileNotFoundError(f"필요한 데이터 파일을 찾을 수 없습니다.")
+    
+    # 기존 로직 계속 진행
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
     harmony_matrix, menus, menu_counts, _ = calculate_harmony_matrix(diet_db)

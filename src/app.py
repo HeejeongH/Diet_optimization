@@ -119,62 +119,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def get_base_path():
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    parent_dir = os.path.dirname(current_dir)
-    data_path = os.path.join(parent_dir, 'data')
-    
-    if os.path.exists(data_path):
-        return parent_dir
-    
-    if os.path.exists(os.path.join(current_dir, 'data')):
-        return current_dir
-    
-    src_parent = os.path.dirname(parent_dir)
-    if os.path.exists(os.path.join(src_parent, 'data')):
-        return src_parent
-    
-    return os.getcwd()
-
-# 기존 load_data 함수를 수정
 @st.cache_data
 def load_data():
-    base_path = get_base_path()
-    
-    possible_paths = [
-        os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB'),
-        os.path.join(base_path, 'sarang_DB', 'processed_DB'),
-        os.path.join(base_path, 'processed_DB'),
-        os.path.join(base_path, 'data')]
-    
-    name = 'sarang'
-    diet_file = f'DIET_{name}.xlsx'
-    menu_file = f'Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_file  = f'Ingredient_Price_{name}.xlsx'
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    base_path = os.path.dirname(current_dir)
 
-    # 각 경로에서 파일 찾기
-    diet_db_path = None
-    menu_db_path = None
-    ingre_db_path = None
-    
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, diet_file)):
-            diet_db_path = os.path.join(path, diet_file)
-            st.sidebar.success(f"식단 DB 파일을 찾았습니다: {diet_db_path}")
-            break
-    
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, menu_file)):
-            menu_db_path = os.path.join(path, menu_file)
-            st.sidebar.success(f"메뉴 DB 파일을 찾았습니다: {menu_db_path}")
-            break
-            
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, ingre_file)):
-            ingre_db_path = os.path.join(path, ingre_file)
-            st.sidebar.success(f"식재료 DB 파일을 찾았습니다: {ingre_db_path}")
-            break
+    diet_db_path = os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB', 'DIET_sarang.xlsx')
+    menu_db_path = os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB', 'Menu_ingredient_nutrient_sarang.xlsx')
+    ingre_db_path = os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB', 'Ingredient_Price_sarang.xlsx')
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
@@ -233,6 +185,10 @@ population_size = 50
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        base_path = os.path.dirname(current_dir)
+        image_path = os.path.join(base_path, 'assets', 'logo.png')
+
         st.image("../assets/logo.png", width=180, use_column_width=True)
     st.markdown("---")
     

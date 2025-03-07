@@ -9,9 +9,9 @@ def load_and_process_data(diet_db_path: str, menu_db_path: str, ingre_db_path: s
     menu_nutri_df = pd.read_excel(menu_db_path, sheet_name='nutrient')
     menu_cat_df = pd.read_excel(menu_db_path, sheet_name='category')
     
-    # 단가(원/g) 열을 숫자형으로 변환
+    # Price 열을 숫자형으로 변환
     ingre_price_df = pd.read_excel(ingre_db_path)
-    ingre_price_df['단가(원/g)'] = pd.to_numeric(ingre_price_df['단가(원/g)'], errors='coerce')
+    ingre_price_df['Price'] = pd.to_numeric(ingre_price_df['Price'], errors='coerce')
     
     menu_categories = dict(zip(menu_cat_df['Menu'], menu_cat_df['Category']))
 
@@ -25,7 +25,7 @@ def load_and_process_data(diet_db_path: str, menu_db_path: str, ingre_db_path: s
             amount = 0.0
             print(f"Warning: Missing amount data for {ingredient_name}")
         
-        price_per_g = ingre_price_df[ingre_price_df['Ingredient'] == ingredient_name]['단가(원/g)']
+        price_per_g = ingre_price_df[ingre_price_df['Ingredient'] == ingredient_name]['Price']
         # NaN 값 처리 추가
         if not price_per_g.empty and not pd.isna(price_per_g.values[0]):
             price = float(price_per_g.values[0]) * amount
@@ -70,7 +70,7 @@ def load_all_menus(menu_db_path: str, ingre_db_path: str) -> List[Menu]:
     menu_cat_df = pd.read_excel(menu_db_path, sheet_name='category')
     
     ingre_price_df = pd.read_excel(ingre_db_path)
-    ingre_price_df['단가(원/g)'] = pd.to_numeric(ingre_price_df['단가(원/g)'], errors='coerce')
+    ingre_price_df['Price'] = pd.to_numeric(ingre_price_df['Price'], errors='coerce')
 
     menu_categories = dict(zip(menu_cat_df['Menu'], menu_cat_df['Category']))
 
@@ -82,7 +82,7 @@ def load_all_menus(menu_db_path: str, ingre_db_path: str) -> List[Menu]:
         if pd.isna(amount):
             amount = 0.0
         
-        price_per_g = ingre_price_df[ingre_price_df['Ingredient'] == ingredient_name]['단가(원/g)']
+        price_per_g = ingre_price_df[ingre_price_df['Ingredient'] == ingredient_name]['Price']
         if not price_per_g.empty and not pd.isna(price_per_g.values[0]):
             price = float(price_per_g.values[0]) * amount
         else:

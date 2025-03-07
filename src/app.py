@@ -189,7 +189,7 @@ with st.sidebar:
         base_path = os.path.dirname(current_dir)
         image_path = os.path.join(base_path, 'assets', 'logo.png')
 
-        st.image("../assets/logo.png", width=180, use_column_width=True)
+        st.image(image_path, width=180, use_column_width=True)
     st.markdown("---")
     
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')

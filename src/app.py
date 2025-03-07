@@ -293,9 +293,10 @@ else:
     with col2:
         st.button("↻", key="reupload_button", on_click=handle_reupload, help="다른 식단 파일을 업로드합니다", type="secondary")
 
-    name = 'sarang'
-    menu_db_path = f'Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'Ingredient_Price_{name}.xlsx'
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    base_path = os.path.dirname(current_dir)
+    menu_db_path = os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB', 'Menu_ingredient_nutrient_sarang.xlsx')
+    ingre_db_path = os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB', 'Ingredient_Price_sarang.xlsx')
 
     weekly_diet = load_and_process_data(uploaded_file, menu_db_path, ingre_db_path)
     

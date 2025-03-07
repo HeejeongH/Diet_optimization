@@ -1,29 +1,10 @@
 import streamlit as st
 import pandas as pd 
-import numpy as np 
-from load_data import load_and_process_data, create_nutrient_constraints, load_all_menus, load_sample_file
+from load_data import load_and_process_data, create_nutrient_constraints, load_all_menus
 from evaluation_function import calculate_harmony_matrix, get_top_n_harmony_pairs
 from utils import diet_to_dataframe, count_menu_changes
 from spea2_optimizer import SPEA2Optimizer
 from Diet_class import NutrientConstraints
-import os
-
-def get_base_path():
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    data_path = os.path.join(parent_dir, 'data')
-    
-    if os.path.exists(data_path):
-        return parent_dir
-    
-    if os.path.exists(os.path.join(current_dir, 'data')):
-        return current_dir
-    
-    src_parent = os.path.dirname(parent_dir)
-    if os.path.exists(os.path.join(src_parent, 'data')):
-        return src_parent
-    
-    return os.getcwd()
 
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
@@ -139,39 +120,11 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    base_path = get_base_path()
-    possible_paths = [
-        os.path.join(base_path, 'data', 'sarang_DB', 'processed_DB'),
-        os.path.join(base_path, 'sarang_DB', 'processed_DB'),
-        os.path.join(base_path, 'processed_DB'),
-        os.path.join(base_path, 'data')
-    ]
+    name = 'sarang'
+    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
+    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
     
-    # 파일 이름
-    diet_file = 'DIET_sarang.xlsx'
-    menu_file = 'Menu_ingredient_nutrient.xlsx'
-    ingre_file = 'Ingredient_Price.xlsx'
-    
-    # 각 경로에서 파일 찾기
-    diet_db_path = None
-    menu_db_path = None
-    ingre_db_path = None
-    
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, diet_file)):
-            diet_db_path = os.path.join(path, diet_file)
-            break
-    
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, menu_file)):
-            menu_db_path = os.path.join(path, menu_file)
-            break
-            
-    for path in possible_paths:
-        if os.path.exists(os.path.join(path, ingre_file)):
-            ingre_db_path = os.path.join(path, ingre_file)
-            break
-        
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
     harmony_matrix, menus, menu_counts, _ = calculate_harmony_matrix(diet_db)

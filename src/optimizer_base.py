@@ -27,31 +27,79 @@ class DietOptimizer(ABC):
         if np.random.random() > self.crossover_prob:
             return parent1  # 교차가 일어나지 않으면 parent1 반환
             
-        child_meals = []
-        for meal1, meal2 in zip(parent1.meals, parent2.meals):
-            child_menus = []
-            for menu1, menu2 in zip(meal1.menus, meal2.menus):
-                child_menus.append(menu1 if np.random.random() < 0.5 else menu2)
-            child_meals.append(Meal(child_menus, meal1.date, meal1.meal_type))
-        return Diet(child_meals)
-    
+        max_attempts = 10  # 최대 시도 횟수
+        
+        for _ in range(max_attempts):
+            child_meals = []
+            for meal1, meal2 in zip(parent1.meals, parent2.meals):
+                child_menus = []
+                for menu1, menu2 in zip(meal1.menus, meal2.menus):
+                    child_menus.append(menu1 if np.random.random() < 0.5 else menu2)
+                child_meals.append(Meal(child_menus, meal1.date, meal1.meal_type))
+            
+            child = Diet(child_meals)
+            
+            # 제약조건 검증
+            if self.validate_nutrient_constraints(child):
+                return child
+        
+        # 최대 시도 횟수 초과시 부모 중 하나 반환
+        return parent1 if np.random.random() < 0.5 else parent2
+
     def mutate(self, diet: Diet) -> Diet:
-        mutated_meals = []
-        for meal in diet.meals:
-            if np.random.random() < self.mutation_prob:
-                mutated_menus = []
+        max_attempts = 10  # 최대 시도 횟수
+        
+        for _ in range(max_attempts):
+            mutated_meals = []
+            for meal in diet.meals:
+                if np.random.random() < self.mutation_prob:
+                    mutated_menus = []
+                    for menu in meal.menus:
+                        if np.random.random() < self.mutation_menu_prob:
+                            new_menu = np.random.choice(self.all_menus)
+                            mutated_menus.append(new_menu)
+                        else:
+                            mutated_menus.append(menu)
+                    mutated_meals.append(Meal(mutated_menus, meal.date, meal.meal_type))
+                else:
+                    mutated_meals.append(meal)
+                    
+            mutated_diet = Diet(mutated_meals)
+            
+            # 제약조건 검증
+            if self.validate_nutrient_constraints(mutated_diet):
+                return mutated_diet
+        
+        # 최대 시도 횟수 초과시 원본 반환
+        return diet
+
+    def validate_nutrient_constraints(self, weeklydiet: Diet) -> bool:
+        days = len(weeklydiet.meals) // 3
+        
+        for day in range(days):
+            daily_nutrients = {nutrient: 0 for nutrient in self.nutrient_constraints.min_values}
+            start_idx = day * 3
+            for meal in weeklydiet.meals[start_idx:start_idx + 3]:
                 for menu in meal.menus:
-                    if np.random.random() < self.mutation_menu_prob:
-                        new_menu = np.random.choice(self.all_menus)
-                        mutated_menus.append(new_menu)
-                    else:
-                        mutated_menus.append(menu)
-                mutated_meals.append(Meal(mutated_menus, meal.date, meal.meal_type))
-            else:
-                mutated_meals.append(meal)
-        return Diet(mutated_meals)
+                    for nutrient, amount in menu.nutrients.items():
+                        daily_nutrients[nutrient] += amount
+            
+            # 영양소 제약조건 검증
+            for nutrient, amount in daily_nutrients.items():
+                min_value = self.nutrient_constraints.min_values[nutrient]
+                max_value = self.nutrient_constraints.max_values[nutrient]
+                
+                # 탄수화물, 단백질, 지방에 대해서만 엄격한 제약 적용
+                if nutrient in ['탄수화물(g)', '단백질(g)', '지방(g)']:
+                    if amount < min_value or amount > max_value:
+                        return False
+        
+        return True
 
     def fitness(self, diet_db: Diet, weeklydiet: Diet) -> List[float]:
+        if not self.validate_nutrient_constraints(weeklydiet):
+            return [-float('inf'), -float('inf'), -float('inf'), -float('inf')]
+        
         nutrition_score = evaluate_nutrition(weeklydiet, self.nutrient_constraints)
         cost_score = evaluate_cost(diet_db, weeklydiet)
         harmony_score = evaluate_harmony(diet_db, weeklydiet)

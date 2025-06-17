@@ -9,6 +9,53 @@ import time
 from datetime import datetime
 from utils import diet_to_dataframe, count_menu_changes
 
+import os
+from pathlib import Path
+
+def debug_file_paths():
+    """파일 위치 디버깅 정보 출력"""
+    current_dir = Path.cwd()
+    print(f"현재 작업 디렉토리: {current_dir}")
+    
+    # 기존 경로들 확인
+    paths_to_check = [
+        '../data/sarang_DB/processed_DB/DIET_jeongseong.xlsx',
+        './data/sarang_DB/processed_DB/DIET_jeongseong.xlsx', 
+        'data/sarang_DB/processed_DB/DIET_jeongseong.xlsx',
+        'DIET_jeongseong.xlsx'
+    ]
+    
+    print("\n=== 경로 존재 확인 ===")
+    for path in paths_to_check:
+        exists = os.path.exists(path)
+        print(f"{'✓' if exists else '✗'} {path}")
+    
+    # 프로젝트 구조 출력 (최대 3레벨)
+    print("\n=== 프로젝트 구조 ===")
+    for root, dirs, files in os.walk(current_dir):
+        level = root.replace(str(current_dir), '').count(os.sep)
+        if level > 2:  # 3레벨까지만
+            continue
+        indent = '  ' * level
+        print(f"{indent}{os.path.basename(root)}/")
+        
+        # Excel 파일만 표시
+        excel_files = [f for f in files if f.endswith('.xlsx')]
+        for file in excel_files:
+            print(f"{indent}  📄 {file}")
+    
+    # 필요한 파일들 검색
+    print("\n=== 필요한 파일 검색 ===")
+    target_files = ['DIET_jeongseong.xlsx', 'Menu_ingredient_nutrient_jeongseong.xlsx', 'Ingredient_Price_jeongseong.xlsx']
+    
+    for target in target_files:
+        found = list(current_dir.glob(f"**/{target}"))
+        if found:
+            print(f"✓ {target}: {found[0]}")
+        else:
+            print(f"✗ {target}: 찾을 수 없음")
+
+
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
 
@@ -204,10 +251,33 @@ def logout():
     st.experimental_rerun()
 @st.cache_data
 def load_data():
+    debug_file_paths()
+
     name = 'jeongseong'
     diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
     menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
     ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+
+    print(f"\n=== 시도할 경로 ===")
+    print(f"Diet DB: {diet_db_path}")
+    print(f"Menu DB: {menu_db_path}") 
+    print(f"Ingredient DB: {ingre_db_path}")
+
+    try:
+        from load_data import load_and_process_data, create_nutrient_constraints, load_all_menus
+        from evaluation_function import calculate_harmony_matrix
+        
+        diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
+        nutrient_constraints = create_nutrient_constraints()
+        harmony_matrix, menus, menu_counts, _ = calculate_harmony_matrix(diet_db)
+        all_menus = load_all_menus(menu_db_path, ingre_db_path)
+        
+        return diet_db, nutrient_constraints, harmony_matrix, menus, menu_counts, all_menus
+        
+    except FileNotFoundError as e:
+        print(f"\n❌ 파일 없음: {e}")
+        print("위의 디버깅 정보를 확인하여 올바른 경로로 수정하세요.")
+        return None, None, None, None, None, None
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()

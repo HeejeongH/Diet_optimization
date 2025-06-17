@@ -323,8 +323,8 @@ diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = lo
 # 사이드바
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
-    with col2:
-        st.image("../assets/logo.png", width=180, use_column_width=True)
+    '''with col2:
+        st.image("../assets/logo.png", width=180, use_column_width=True)'''
 
     st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')

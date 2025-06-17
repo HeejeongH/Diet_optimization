@@ -238,7 +238,7 @@ def main():
         })
     
     df_summary = pd.DataFrame(summary_data)
-    st.dataframe(df_summary, use_container_width=True, hide_index=True)
+    st.dataframe(df_summary, use_container_width=True)
     
     # 영양 분석 모달
     if st.session_state.show_analysis:

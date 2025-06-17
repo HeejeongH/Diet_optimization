@@ -1,11 +1,8 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from load_data import load_all_menus, create_nutrient_constraints
 from Diet_class import Menu, Meal, Diet
 from evaluation_function import validate_weekly_constraints_detailed
-import plotly.express as px
-import plotly.graph_objects as go
 
 class ManualDietDesigner:
     def __init__(self, name):

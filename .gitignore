@@ -8,3 +8,5 @@ __pycache__/
 !data/Weekly_diet_ex.xlsx
 data/sarang_DB/raw_DB/
 src/results/
+src/__pycache__/
+*.xlsx

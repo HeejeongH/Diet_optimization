@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.xlsx
+!data/sarang_DB/processed_DB/DIET_jeongseong.xlsx
+!data/sarang_DB/processed_DB/Menu_ingredient_nutrient_jeongseong.xlsx
+!data/sarang_DB/processed_DB/Ingredient_Price_jeongseong.xlsx
+!data/Weekly_diet_ex.xlsx
+data/sarang_DB/raw_DB/
+src/results/

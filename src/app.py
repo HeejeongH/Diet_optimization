@@ -207,9 +207,9 @@ def logout():
 @st.cache_data
 def load_data():
     name = 'jeongseong'
-    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
-    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+    diet_db_path = f'./data/sarang_DB/processed_DB/DIET_{name}.xlsx'
+    menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+    ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
@@ -242,7 +242,7 @@ def handle_reupload():
 
 def generate_random_weekly_diet():
     """랜덤 주간 식단 생성"""
-    diet_db_path = '../data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
+    diet_db_path = './data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
     df = pd.read_excel(diet_db_path)
     
     unique_days = df['Day'].unique()
@@ -280,7 +280,7 @@ diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = lo
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
-        st.image("../assets/logo.png", width=180, use_column_width=True)
+        st.image("./assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
@@ -404,8 +404,8 @@ else:
     # 초기 식단 분석 및 캐시 저장
     if st.session_state.weekly_diet is None:
         name = 'jeongseong'
-        menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-        ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+        menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+        ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
         
         if hasattr(st.session_state, 'random_diet') and st.session_state.random_diet:
             # 랜덤 식단 생성

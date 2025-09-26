@@ -197,7 +197,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -205,7 +205,7 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.rerun()
+    st.experimental_rerun()
 
 @st.cache_data
 def load_data():
@@ -510,13 +510,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.rerun()
+            st.experimental_rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.rerun()
+        st.experimental_rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -855,7 +855,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.rerun()
+            st.experimental_rerun()
 
 st.markdown("---")
 st.caption("© 2025 사랑과 선행 요양원 식단 최적화 프로그램. All rights reserved.")

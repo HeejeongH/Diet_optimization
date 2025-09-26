@@ -1,10 +1,13 @@
 import streamlit as st
-import pandas as pd 
+import pandas as pd
 import os
+import tempfile
 from load_data import load_and_process_data, create_nutrient_constraints, load_all_menus
 from evaluation_function import calculate_harmony_matrix, get_top_n_harmony_pairs, validate_weekly_constraints, validate_weekly_constraints_detailed, calculate_actual_cost
 from spea2_optimizer import SPEA2Optimizer
 from Diet_class import NutrientConstraints, set_servings, get_servings
+from diet_converter import convert_diet_format
+from food_mapper import apply_food_mapping
 import time
 from datetime import datetime
 from utils import diet_to_dataframe, count_menu_changes
@@ -194,7 +197,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -202,14 +205,14 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()
 
 @st.cache_data
 def load_data():
     name = 'jeongseong'
-    diet_db_path = f'./data/sarang_DB/processed_DB/DIET_{name}.xlsx'
-    menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
+    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
@@ -239,27 +242,150 @@ def handle_reupload():
     st.session_state.optimization_start_time = None
     st.session_state.optimization_end_time = None
     st.session_state.optimization_duration = None
+    # 업로드 파일 관련 상태 초기화
+    if 'uploaded_file' in st.session_state:
+        del st.session_state.uploaded_file
+    if 'random_diet' in st.session_state:
+        del st.session_state.random_diet
 
 def generate_random_weekly_diet():
     """랜덤 주간 식단 생성"""
-    diet_db_path = './data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
+    diet_db_path = '../data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
     df = pd.read_excel(diet_db_path)
-    
+
     unique_days = df['Day'].unique()
     selected_days = random.sample(list(unique_days), 7)
     selected_days.sort()
-    
+
     selected_meals = df[df['Day'].isin(selected_days)].copy()
-    
+
     day_mapping = {day: i+1 for i, day in enumerate(selected_days)}
     selected_meals['Day'] = selected_meals['Day'].map(day_mapping)
-    
+
     meal_order = {'Breakfast': 1, 'Lunch': 2, 'Dinner': 3}
     selected_meals['sort_order'] = selected_meals['MealType'].map(meal_order)
     selected_meals = selected_meals.sort_values(['Day', 'sort_order'])
     selected_meals = selected_meals.drop('sort_order', axis=1)
-    
+
     return selected_meals
+
+def process_mapped_diet_data(file_path):
+    """
+    매핑된 식단 데이터를 시스템에서 사용할 수 있는 표준 형태로 변환
+    """
+    try:
+        df = pd.read_excel(file_path)
+
+        # 매핑된 파일인지 확인 (Mapped_Menus 컬럼 존재)
+        if 'Mapped_Menus' in df.columns:
+            # Mapped_Menus를 Menus로 변경하여 표준 형태로 만들기
+            standard_df = df[['Day', 'MealType', 'Mapped_Menus']].copy()
+            standard_df.rename(columns={'Mapped_Menus': 'Menus'}, inplace=True)
+
+            # 임시 파일로 저장
+            with tempfile.NamedTemporaryFile(delete=False, suffix='_standard.xlsx') as tmp_file:
+                standard_file_path = tmp_file.name
+
+            standard_df.to_excel(standard_file_path, index=False)
+            return standard_file_path
+        else:
+            # 이미 표준 형태인 경우 그대로 반환
+            return file_path
+
+    except Exception as e:
+        st.error(f"❌ 매핑된 데이터 처리 중 오류 발생: {str(e)}")
+        return file_path
+
+def detect_and_convert_diet_format(uploaded_file):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(uploaded_file.getbuffer())
+            temp_input_path = tmp_file.name
+
+        df = pd.read_excel(temp_input_path)
+
+        # Weekly_diet_ex.xlsx 형태인지 확인 (Day, MealType, Menus 컬럼 존재)
+        expected_columns = ['Day', 'MealType', 'Menus']
+        if all(col in df.columns for col in expected_columns):
+            st.success("✅ 올바른 형태의 식단 파일입니다.")
+
+            # 매핑 과정 적용
+            mapping_file_path = 'food_mapping.csv'
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
+                temp_mapped_path = tmp_mapped.name
+
+            try:
+                apply_food_mapping(temp_input_path, mapping_file_path, temp_mapped_path)
+
+                # 원본 임시 파일 삭제
+                os.unlink(temp_input_path)
+
+                st.success("✅ 음식 매핑이 완료되었습니다.")
+
+                # 매핑된 데이터를 표준 형태로 변환
+                final_path = process_mapped_diet_data(temp_mapped_path)
+
+                # 매핑 파일 삭제 (표준 형태로 변환된 파일 사용)
+                if final_path != temp_mapped_path:
+                    os.unlink(temp_mapped_path)
+
+                return final_path
+
+            except Exception as e:
+                st.warning(f"⚠️ 음식 매핑 중 오류 발생: {str(e)}")
+                return temp_input_path
+
+        # 식단표 예시.xlsx 형태인지 확인 (주간 식단표 형태)
+        if '주간 식단표' in df.columns or len(df.columns) >= 7:
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='_converted.xlsx') as tmp_converted:
+                temp_output_path = tmp_converted.name
+
+            # 형태 변환
+            convert_diet_format(temp_input_path, temp_output_path)
+
+            # 원본 임시 파일 삭제
+            os.unlink(temp_input_path)
+
+            st.success("✅ 파일 형태 변환이 완료되었습니다.")
+
+            # 매핑 과정 적용
+            mapping_file_path = 'food_mapping.csv'
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
+                temp_mapped_path = tmp_mapped.name
+
+            try:
+                apply_food_mapping(temp_output_path, mapping_file_path, temp_mapped_path)
+
+                # 변환된 임시 파일 삭제
+                os.unlink(temp_output_path)
+
+                st.success("✅ 음식 매핑이 완료되었습니다.")
+
+                # 매핑된 데이터를 표준 형태로 변환
+                final_path = process_mapped_diet_data(temp_mapped_path)
+
+                # 매핑 파일 삭제 (표준 형태로 변환된 파일 사용)
+                if final_path != temp_mapped_path:
+                    os.unlink(temp_mapped_path)
+
+                return final_path
+
+            except Exception as e:
+                st.warning(f"⚠️ 음식 매핑 중 오류 발생: {str(e)}")
+                return temp_output_path
+        else:
+            st.error("❌ 지원되지 않는 파일 형태입니다. Weekly Diet 형태나 주간 식단표 형태의 파일을 업로드해주세요.")
+            os.unlink(temp_input_path)
+            return None
+
+    except Exception as e:
+        st.error(f"❌ 파일 처리 중 오류가 발생했습니다: {str(e)}")
+        if 'temp_input_path' in locals():
+            os.unlink(temp_input_path)
+        return None
 
 # 로그인
 if not st.session_state.logged_in:
@@ -280,7 +406,7 @@ diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = lo
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
-        st.image("./assets/logo.png", width=180, use_column_width=True)
+        st.image("../assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
@@ -384,13 +510,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.experimental_rerun()
+            st.rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.experimental_rerun()
+        st.rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -404,8 +530,8 @@ else:
     # 초기 식단 분석 및 캐시 저장
     if st.session_state.weekly_diet is None:
         name = 'jeongseong'
-        menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-        ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+        menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+        ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
         
         if hasattr(st.session_state, 'random_diet') and st.session_state.random_diet:
             # 랜덤 식단 생성
@@ -416,9 +542,51 @@ else:
             st.session_state.weekly_diet = load_and_process_data(temp_file, menu_db_path, ingre_db_path)
             os.remove(temp_file)  # 임시 파일 삭제
         else:
-            # 업로드된 파일 사용
+            # 업로드된 파일 사용 (자동 변환 포함)
             uploaded_file = st.session_state.uploaded_file
-            st.session_state.weekly_diet = load_and_process_data(uploaded_file, menu_db_path, ingre_db_path)
+
+            # 파일 형태 감지 및 변환
+            converted_file_path = detect_and_convert_diet_format(uploaded_file)
+
+            if converted_file_path:
+                try:
+                    # 변환된 파일 내용 확인 (디버깅용)
+                    debug_df = pd.read_excel(converted_file_path)
+
+                    # 표준 출력을 캡쳐하여 누락 메뉴 확인
+                    import io
+                    import sys
+                    old_stdout = sys.stdout
+                    sys.stdout = captured_output = io.StringIO()
+
+                    try:
+                        st.session_state.weekly_diet = load_and_process_data(converted_file_path, menu_db_path, ingre_db_path)
+                    finally:
+                        sys.stdout = old_stdout
+
+                    # 캡쳐된 출력에서 매핑 및 누락 메뉴 정보 표시
+                    captured_text = captured_output.getvalue()
+                    if "Menu mappings" in captured_text:
+                        mapping_lines = [line for line in captured_text.split('\n') if "Menu mappings" in line]
+
+                    if "Missing menus" in captured_text:
+                        missing_lines = [line for line in captured_text.split('\n') if "Missing menus" in line]
+                        st.warning(f"⚠️ 데이터베이스에서 찾을 수 없어 제외된 메뉴들:\n" + "\n".join(missing_lines[:10]))
+
+                    # 로드된 데이터 확인 (디버깅용)
+                    if st.session_state.weekly_diet and st.session_state.weekly_diet.meals:
+                        first_meal_menus = [menu.name for menu in st.session_state.weekly_diet.meals[0].menus]
+
+                    # 임시 파일 정리
+                    os.unlink(converted_file_path)
+                except Exception as e:
+                    st.error(f"❌ 식단 데이터 로드 중 오류가 발생했습니다: {str(e)}")
+                    if os.path.exists(converted_file_path):
+                        os.unlink(converted_file_path)
+                    st.stop()
+            else:
+                st.error("❌ 파일을 처리할 수 없습니다. 다른 파일을 업로드해주세요.")
+                st.stop()
     
         st.session_state.initial_fitness = optimizer.fitness(diet_db, st.session_state.weekly_diet)
         
@@ -687,7 +855,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.experimental_rerun()
+            st.rerun()
 
 st.markdown("---")
 st.caption("© 2025 사랑과 선행 요양원 식단 최적화 프로그램. All rights reserved.")

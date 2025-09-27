@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import os
+import io
+import sys
 import tempfile
 from load_data import load_and_process_data, create_nutrient_constraints, load_all_menus
 from evaluation_function import calculate_harmony_matrix, get_top_n_harmony_pairs, validate_weekly_constraints, validate_weekly_constraints_detailed, calculate_actual_cost
@@ -13,6 +14,10 @@ from datetime import datetime
 from utils import diet_to_dataframe, count_menu_changes
 import random
 import io
+from datetime import datetime
+import os
+from github import Github
+import base64
 
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
@@ -168,7 +173,6 @@ if 'optimization_end_time' not in st.session_state:
 if 'optimization_duration' not in st.session_state:
     st.session_state.optimization_duration = None
 
-# 사용되는 함수 처리
 def login_page():
     st.markdown("""
     <style>
@@ -198,7 +202,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -206,14 +210,14 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()
 
 @st.cache_data
 def load_data():
     name = 'jeongseong'
-    diet_db_path = f'./data/sarang_DB/processed_DB/DIET_{name}.xlsx'
-    menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
+    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
@@ -243,15 +247,13 @@ def handle_reupload():
     st.session_state.optimization_start_time = None
     st.session_state.optimization_end_time = None
     st.session_state.optimization_duration = None
-    # 업로드 파일 관련 상태 초기화
     if 'uploaded_file' in st.session_state:
         del st.session_state.uploaded_file
     if 'random_diet' in st.session_state:
         del st.session_state.random_diet
 
 def generate_random_weekly_diet():
-    """랜덤 주간 식단 생성"""
-    diet_db_path = './data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
+    diet_db_path = '../data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
     df = pd.read_excel(diet_db_path)
 
     unique_days = df['Day'].unique()
@@ -271,26 +273,19 @@ def generate_random_weekly_diet():
     return selected_meals
 
 def process_mapped_diet_data(file_path):
-    """
-    매핑된 식단 데이터를 시스템에서 사용할 수 있는 표준 형태로 변환
-    """
     try:
         df = pd.read_excel(file_path)
 
-        # 매핑된 파일인지 확인 (Mapped_Menus 컬럼 존재)
         if 'Mapped_Menus' in df.columns:
-            # Mapped_Menus를 Menus로 변경하여 표준 형태로 만들기
             standard_df = df[['Day', 'MealType', 'Mapped_Menus']].copy()
             standard_df.rename(columns={'Mapped_Menus': 'Menus'}, inplace=True)
 
-            # 임시 파일로 저장
             with tempfile.NamedTemporaryFile(delete=False, suffix='_standard.xlsx') as tmp_file:
                 standard_file_path = tmp_file.name
 
             standard_df.to_excel(standard_file_path, index=False)
             return standard_file_path
         else:
-            # 이미 표준 형태인 경우 그대로 반환
             return file_path
 
     except Exception as e:
@@ -305,78 +300,42 @@ def detect_and_convert_diet_format(uploaded_file):
 
         df = pd.read_excel(temp_input_path)
 
-        # Weekly_diet_ex.xlsx 형태인지 확인 (Day, MealType, Menus 컬럼 존재)
         expected_columns = ['Day', 'MealType', 'Menus']
         if all(col in df.columns for col in expected_columns):
-            st.success("✅ 올바른 형태의 식단 파일입니다.")
-
-            # 매핑 과정 적용
-            mapping_file_path = './src/food_mapping.csv'
+            mapping_file_path = '../src/food_mapping.csv'
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
                 temp_mapped_path = tmp_mapped.name
 
-            try:
-                apply_food_mapping(temp_input_path, mapping_file_path, temp_mapped_path)
+            apply_food_mapping(temp_input_path, mapping_file_path, temp_mapped_path)
+            os.unlink(temp_input_path)
 
-                # 원본 임시 파일 삭제
-                os.unlink(temp_input_path)
+            final_path = process_mapped_diet_data(temp_mapped_path)
+            if final_path != temp_mapped_path:
+                os.unlink(temp_mapped_path)
 
-                st.success("✅ 음식 매핑이 완료되었습니다.")
+            return final_path
 
-                # 매핑된 데이터를 표준 형태로 변환
-                final_path = process_mapped_diet_data(temp_mapped_path)
-
-                # 매핑 파일 삭제 (표준 형태로 변환된 파일 사용)
-                if final_path != temp_mapped_path:
-                    os.unlink(temp_mapped_path)
-
-                return final_path
-
-            except Exception as e:
-                st.warning(f"⚠️ 음식 매핑 중 오류 발생: {str(e)}")
-                return temp_input_path
-
-        # 식단표 예시.xlsx 형태인지 확인 (주간 식단표 형태)
         if '주간 식단표' in df.columns or len(df.columns) >= 7:
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_converted.xlsx') as tmp_converted:
                 temp_output_path = tmp_converted.name
 
-            # 형태 변환
             convert_diet_format(temp_input_path, temp_output_path)
-
-            # 원본 임시 파일 삭제
             os.unlink(temp_input_path)
 
-            st.success("✅ 파일 형태 변환이 완료되었습니다.")
-
-            # 매핑 과정 적용
-            mapping_file_path = './src/food_mapping.csv'
+            mapping_file_path = '../src/food_mapping.csv'
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
                 temp_mapped_path = tmp_mapped.name
 
-            try:
-                apply_food_mapping(temp_output_path, mapping_file_path, temp_mapped_path)
+            apply_food_mapping(temp_output_path, mapping_file_path, temp_mapped_path)
+            os.unlink(temp_output_path)
+            final_path = process_mapped_diet_data(temp_mapped_path)
+            if final_path != temp_mapped_path:
+                os.unlink(temp_mapped_path)
+            return final_path
 
-                # 변환된 임시 파일 삭제
-                os.unlink(temp_output_path)
-
-                st.success("✅ 음식 매핑이 완료되었습니다.")
-
-                # 매핑된 데이터를 표준 형태로 변환
-                final_path = process_mapped_diet_data(temp_mapped_path)
-
-                # 매핑 파일 삭제 (표준 형태로 변환된 파일 사용)
-                if final_path != temp_mapped_path:
-                    os.unlink(temp_mapped_path)
-
-                return final_path
-
-            except Exception as e:
-                st.warning(f"⚠️ 음식 매핑 중 오류 발생: {str(e)}")
-                return temp_output_path
         else:
             st.error("❌ 지원되지 않는 파일 형태입니다. Weekly Diet 형태나 주간 식단표 형태의 파일을 업로드해주세요.")
             os.unlink(temp_input_path)
@@ -388,19 +347,123 @@ def detect_and_convert_diet_format(uploaded_file):
             os.unlink(temp_input_path)
         return None
 
+def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_counts=False):
+    from datetime import datetime, timedelta
+
+    days_data = {}
+    meal_types = ['Breakfast', 'Lunch', 'Dinner']
+    korean_meals = ['아침', '점심', '저녁']
+
+    for day in range(1, 8):
+        days_data[day] = {meal: [] for meal in meal_types}
+
+    for i, meal in enumerate(weekly_diet.meals):
+        day = (i // 3) + 1
+        meal_type = meal_types[i % 3]
+
+        if day <= 7:  # 7일까지만
+            menu_names = [menu.name for menu in meal.menus]
+            days_data[day][meal_type] = menu_names
+
+    max_menus = {}
+    for meal_type in meal_types:
+        max_count = 0
+        for day in range(1, 8):
+            count = len(days_data[day][meal_type])
+            if count > max_count:
+                max_count = count
+        max_menus[meal_type] = max_count
+
+    today = datetime.now().date()
+    weekdays = []
+    for i in range(7):
+        date = today + timedelta(days=i)
+        weekdays.append(date)
+
+    table_data = []
+
+    header_row = ['구분'] + weekdays
+    table_data.append(header_row)
+
+    for meal_idx, (meal_type, korean_meal) in enumerate(zip(meal_types, korean_meals)):
+        max_menu_count = max_menus[meal_type]
+
+        for menu_idx in range(max_menu_count):
+            if menu_idx == 0:
+                row = [korean_meal]
+            else:
+                row = ['']
+
+            for day in range(1, 8):
+                menus = days_data[day][meal_type]
+                if menu_idx < len(menus):
+                    row.append(menus[menu_idx])
+                else:
+                    row.append('')
+
+            table_data.append(row)
+
+    if return_menu_counts:
+        return pd.DataFrame(table_data), max_menus
+    else:
+        return pd.DataFrame(table_data)
+
+def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
+    github_token = "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"
+
+    g = Github(github_token)
+    user = g.get_user()
+    repo = user.get_repo(repo_name)
+    file_content = base64.b64encode(file_buffer.getvalue()).decode()
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    file_path = f"results/{today}/{filename}"
+
+    try:
+        existing_file = repo.get_contents(file_path)
+        repo.update_file(
+            file_path,
+            f"Update {filename}",
+            file_content,
+            existing_file.sha
+        )
+    except:
+        repo.create_file(
+            file_path,
+            f"Add {filename}",
+            file_content
+        )
+
+    return {
+        'success': True,
+        'repo_url': repo.html_url,
+        'file_path': file_path
+    }
+
 def export_results_to_excel():
-    """최적화 결과를 엑셀 파일로 저장"""
     if not st.session_state.optimization_complete or not st.session_state.optimization_results:
         return None
-    
+
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        
+
+        # 스타일 정의
+        header_font = Font(bold=True, size=12, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+
         # 1. 요약 정보 시트
         improved_diets = st.session_state.optimization_results
         all_improvements = [improvements for _, _, improvements in improved_diets]
         avg_improvements = [sum(imp[i] for imp in all_improvements) / len(all_improvements) for i in range(4)]
-        
+
         all_change_rates = []
         for diet, _, _ in improved_diets:
             menu_changes = count_menu_changes(st.session_state.weekly_diet, diet)
@@ -409,7 +472,7 @@ def export_results_to_excel():
             change_rate = (total_changed / total_menus * 100) if total_menus > 0 else 0
             all_change_rates.append(change_rate)
         overall_change_rate = sum(all_change_rates) / len(all_change_rates) if all_change_rates else 0
-        
+
         summary_data = {
             "항목": ["사용자", "알고리즘", "세대수", "시작시간", "완료시간", "소요시간", "개선된 해 개수", "평균 영양 개선율(%)", "평균 비용 개선율(%)", "평균 조화 개선율(%)", "평균 다양성 개선율(%)", "평균 메뉴 변경률(%)"],
             "값": [
@@ -420,73 +483,80 @@ def export_results_to_excel():
                 st.session_state.optimization_end_time.strftime("%Y-%m-%d %H:%M:%S") if st.session_state.optimization_end_time else 'N/A',
                 f"{st.session_state.optimization_duration:.1f}초" if st.session_state.optimization_duration else 'N/A',
                 len(improved_diets),
-                f"{avg_improvements[0]:.2f}",
-                f"{avg_improvements[1]:.2f}",
-                f"{avg_improvements[2]:.2f}",
-                f"{avg_improvements[3]:.2f}",
+                f"{avg_improvements[0]:.2f}" if len(avg_improvements) > 0 else 'N/A',
+                f"{avg_improvements[1]:.2f}" if len(avg_improvements) > 1 else 'N/A',
+                f"{avg_improvements[2]:.2f}" if len(avg_improvements) > 2 else 'N/A',
+                f"{avg_improvements[3]:.2f}" if len(avg_improvements) > 3 else 'N/A',
                 f"{overall_change_rate:.1f}"
             ]
         }
         summary_df = pd.DataFrame(summary_data)
-        summary_df.to_excel(writer, sheet_name='최적화_요약', index=False)
-        
-        # 2. 초기 식단 시트
-        initial_df = diet_to_dataframe(st.session_state.weekly_diet, "초기 식단")
-        initial_df.to_excel(writer, sheet_name='초기_식단', index=False)
-        
-        # 3. 각 제안 식단 시트
+        summary_df.to_excel(writer, sheet_name='📊 최적화 요약', index=False)
+
+        ws_summary = writer.sheets['📊 최적화 요약']
+        ws_summary.column_dimensions['A'].width = 20
+        ws_summary.column_dimensions['B'].width = 25
+
+        for cell in ws_summary[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+
+        for row in ws_summary.iter_rows(min_row=2, max_row=ws_summary.max_row):
+            for cell in row:
+                cell.border = border
+                cell.alignment = center_alignment
+
+        # 2. 각 제안 식단 시트
+        def style_table(ws, start_row, table_length, max_col=8):
+            end_row = start_row + table_length + 1
+            
+            # 헤더 스타일링
+            for col_idx in range(1, max_col + 1):
+                cell = ws.cell(row=start_row, column=col_idx)
+                cell.font = Font(bold=True, size=12, color="FFFFFF")
+                cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = border
+            
+            # 데이터 행 스타일링
+            for row_idx in range(start_row + 1, end_row):
+                for col_idx in range(1, max_col + 1):
+                    cell = ws.cell(row=row_idx, column=col_idx)
+                    cell.border = border
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        start_row = 1
+        initial_nutrients_start = 22
+        initial_cost_start = 30
+        initial_perform_start = 36
+
         for j, (optimized_diet, optimized_fitness, improvements) in enumerate(improved_diets):
-            sheet_name = f'제안식단_{j+1}'
-            
-            # 식단 데이터
-            diet_df = diet_to_dataframe(optimized_diet, f"제안 식단 {j+1}")
-            
-            # 성능 지표 추가
             days = len(optimized_diet.meals) // 3
             current_servings = get_servings()
             optimized_cost = calculate_actual_cost(optimized_diet, current_servings)
             initial_cost = st.session_state.initial_cost
-            cost_change = ((optimized_cost - initial_cost) / initial_cost) * 100 if initial_cost > 0 else 0
-            
-            # 메뉴 변경률 계산
+            cost_change = initial_cost - optimized_cost
             menu_changes = count_menu_changes(st.session_state.weekly_diet, optimized_diet)
-            
-            # 성능 요약 데이터프레임 생성
-            performance_data = {
-                "지표": ["영양 점수", "비용 점수", "조화 점수", "다양성 점수", "총 식재료 비용(원)", "비용 변화율(%)", "아침식사 변경률(%)", "점심식사 변경률(%)", "저녁식사 변경률(%)"],
-                "초기값": [
-                    f"{st.session_state.initial_fitness[0]:.2f}",
-                    f"{st.session_state.initial_fitness[1]:.2f}",
-                    f"{st.session_state.initial_fitness[2]:.2f}",
-                    f"{st.session_state.initial_fitness[3]:.2f}",
-                    f"{initial_cost:,.0f}",
-                    "0.0",
-                    "0.0", "0.0", "0.0"
-                ],
-                "최적화값": [
-                    f"{optimized_fitness[0]:.2f}",
-                    f"{optimized_fitness[1]:.2f}",
-                    f"{optimized_fitness[2]:.2f}",
-                    f"{optimized_fitness[3]:.2f}",
-                    f"{optimized_cost:,.0f}",
-                    f"{cost_change:.2f}",
-                    #f"{(menu_changes['Breakfast']['changed'] / menu_changes['Breakfast']['total'] * 100):.1f}",
-                    #f"{(menu_changes['Lunch']['changed'] / menu_changes['Lunch']['total'] * 100):.1f}",
-                    #f"{(menu_changes['Dinner']['changed'] / menu_changes['Dinner']['total'] * 100):.1f}"
-                ],
-                "개선율(%)": [
-                    f"{improvements[0]:.2f}",
-                    f"{improvements[1]:.2f}",
-                    f"{improvements[2]:.2f}",
-                    f"{improvements[3]:.2f}",
-                    f"{cost_change:.2f}",
-                    "-",
-                    "-", "-", "-"
-                ]
-            }
-            performance_df = pd.DataFrame(performance_data)
-            
-            # 영양성분 분석
+
+            start_row = 1
+            sheet_name = f'💡 제안식단 {j+1}'
+
+            ## 1. 식단 섹션
+            weekly_diet_table, max_menus_info = create_weekly_diet_table(optimized_diet, f"제안 식단 {j+1}", return_menu_counts=True)
+
+            weekly_diet_table.to_excel(writer, 
+                                       sheet_name=sheet_name, 
+                                       startrow = start_row, 
+                                       index=False, 
+                                       header=False)
+
+            ws = writer.sheets[sheet_name]
+            ws[f'A{start_row}'] = f"🍽️ 최적화된 주간 식단표 - 제안 식단 {j+1}"
+            ws[f'A{start_row}'].font = Font(bold=True, size=14, color="2F5597")
+
+            ## 2. 영양성분 섹션
             nutrients_data = []
             for nutrient in nutrient_constraints.min_values.keys():
                 total = sum(sum(menu.get_adjusted_nutrients()[nutrient] for menu in meal.menus) for meal in optimized_diet.meals)
@@ -494,7 +564,7 @@ def export_results_to_excel():
                 min_val = nutrient_constraints.min_values[nutrient]
                 max_val = nutrient_constraints.max_values[nutrient]
                 status = "✅" if min_val <= daily_avg <= max_val else "⚠️"
-                
+
                 nutrients_data.append({
                     "영양소": nutrient,
                     "일일평균": f"{daily_avg:.1f}",
@@ -502,17 +572,126 @@ def export_results_to_excel():
                     "상태": status
                 })
             nutrients_df = pd.DataFrame(nutrients_data)
+
+            nutrients_df.to_excel(writer, 
+                                  sheet_name=sheet_name, 
+                                  startrow=initial_nutrients_start, 
+                                  index=False)
+
+            ws[f'A{initial_nutrients_start}'] = "🍎 영양성분 분석"
+            ws[f'A{initial_nutrients_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            ## 3. 비용 정보 섹션
+            cost_data = {
+                "항목": ["총 식재료 비용", "1인당 비용", "1끼당 비용"],
+                "금액": [
+                    f"{optimized_cost:,.0f}원",
+                    f"{optimized_cost/current_servings:,.0f}원" if current_servings > 0 else "N/A",
+                    f"{optimized_cost/(current_servings*21):,.0f}원" if current_servings > 0 else "N/A"
+                ]
+            }
+            cost_df = pd.DataFrame(cost_data)
+
+            cost_df.to_excel(writer, 
+                             sheet_name=sheet_name, 
+                             startrow=initial_cost_start, 
+                             index=False)
             
-            # 빈 행으로 구분하여 하나의 시트에 저장
-            start_row = 0
-            performance_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
-            start_row += len(performance_df) + 2
-            
-            nutrients_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
-            start_row += len(nutrients_df) + 2
-            
-            diet_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
-    
+            ws[f'A{initial_cost_start}'] = "💰 총 식재료 비용 정보"
+            ws[f'A{initial_cost_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            ## 4. 성능 지표 비교 섹션 (마지막)
+            performance_data = {
+                "지표": ["영양 점수", "비용 점수", "조화 점수", "다양성 점수", "총 식재료 비용(원)"],
+                "초기값": [
+                    f"{st.session_state.initial_fitness[0]:.2f}",
+                    f"{st.session_state.initial_fitness[1]:.2f}",
+                    f"{st.session_state.initial_fitness[2]:.2f}",
+                    f"{st.session_state.initial_fitness[3]:.2f}",
+                    f"{initial_cost:,.0f}",
+                ],
+                "최적화값": [
+                    f"{optimized_fitness[0]:.2f}",
+                    f"{optimized_fitness[1]:.2f}",
+                    f"{optimized_fitness[2]:.2f}",
+                    f"{optimized_fitness[3]:.2f}",
+                    f"{optimized_cost:,.0f}",
+                ],
+                "개선율(%)": [
+                    f"{improvements[0]:.2f}",
+                    f"{improvements[1]:.2f}",
+                    f"{improvements[2]:.2f}",
+                    f"{improvements[3]:.2f}",
+                    f"{cost_change:,.0f}원",
+                ]
+            }
+            performance_df = pd.DataFrame(performance_data)
+
+            performance_df.to_excel(writer, 
+                                    sheet_name=sheet_name, 
+                                    startrow=initial_perform_start, 
+                                    index=False)
+
+            ws[f'A{initial_perform_start}'] = "📈 기존 식단과의 성능 비교"
+            ws[f'A{initial_perform_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            ## 열 너비 조정
+            for col in ws.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 25)
+                ws.column_dimensions[column].width = adjusted_width
+
+            ## 식단표 스타일링 및 셀 병합
+            ws.merge_cells('A1:E1')
+            ws.merge_cells(f'A{initial_nutrients_start}:D{initial_nutrients_start}')
+            ws.merge_cells(f'A{initial_cost_start}:B{initial_cost_start}')
+            ws.merge_cells(f'A{initial_perform_start}:D{initial_perform_start}')
+
+            diet_start_row = 3
+            current_row = diet_start_row
+
+            meal_types = ['Breakfast', 'Lunch', 'Dinner']
+            korean_meals = ['아침', '점심', '저녁']
+
+            _, initial_max_menus = create_weekly_diet_table(st.session_state.weekly_diet, "초기 식단", return_menu_counts=True)
+
+            for i, meal_type in enumerate(meal_types):
+                korean_meal = korean_meals[i]
+                max_menu_count = initial_max_menus[meal_type]
+
+                if max_menu_count > 1:
+                    start_row = current_row
+                    end_row = current_row + max_menu_count - 1
+                    ws.merge_cells(f'A{start_row}:A{end_row}')
+
+                    merged_cell = ws[f'A{start_row}']
+                    merged_cell.value = korean_meal
+                    merged_cell.font = Font(bold=True, size=11)
+                    merged_cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+                    merged_cell.alignment = Alignment(horizontal='center', vertical='center')
+                    merged_cell.border = border
+                else:
+                    cell = ws[f'A{current_row}']
+                    cell.font = Font(bold=True, size=11)
+                    cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                    cell.border = border
+
+                current_row += max_menu_count
+
+            ## 식단 표 스타일링
+            style_table(ws, 2, len(weekly_diet_table)-1, 8)  # 식단 표
+            style_table(ws, initial_nutrients_start + 1, len(nutrients_df), 4)  # 영양 표
+            style_table(ws, initial_cost_start + 1, len(cost_df), 2)  # 가격 표
+            style_table(ws, initial_perform_start + 1, len(performance_df), 4) 
+
     buffer.seek(0)
     return buffer
 
@@ -535,7 +714,7 @@ diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = lo
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
-        st.image("./assets/logo.png", width=180, use_column_width=True)
+        st.image("../assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
@@ -639,13 +818,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.experimental_rerun()
+            st.rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.experimental_rerun()
+        st.rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -656,35 +835,24 @@ else:
     with col2:
         st.button("↻", key="reupload_button", on_click=handle_reupload, help="다른 식단을 설정합니다", type="secondary")
 
-    # 초기 식단 분석 및 캐시 저장
     if st.session_state.weekly_diet is None:
         name = 'jeongseong'
-        menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-        ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+        menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+        ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
         
         if hasattr(st.session_state, 'random_diet') and st.session_state.random_diet:
-            # 랜덤 식단 생성
             random_diet_df = generate_random_weekly_diet()
-            # 임시 파일로 저장 후 로드
             temp_file = "temp_random_diet.xlsx"
             random_diet_df.to_excel(temp_file, index=False)
             st.session_state.weekly_diet = load_and_process_data(temp_file, menu_db_path, ingre_db_path)
-            os.remove(temp_file)  # 임시 파일 삭제
+            os.remove(temp_file)
         else:
-            # 업로드된 파일 사용 (자동 변환 포함)
             uploaded_file = st.session_state.uploaded_file
-
-            # 파일 형태 감지 및 변환
             converted_file_path = detect_and_convert_diet_format(uploaded_file)
 
             if converted_file_path:
                 try:
-                    # 변환된 파일 내용 확인 (디버깅용)
                     debug_df = pd.read_excel(converted_file_path)
-
-                    # 표준 출력을 캡쳐하여 누락 메뉴 확인
-                    import io
-                    import sys
                     old_stdout = sys.stdout
                     sys.stdout = captured_output = io.StringIO()
 
@@ -693,7 +861,6 @@ else:
                     finally:
                         sys.stdout = old_stdout
 
-                    # 캡쳐된 출력에서 매핑 및 누락 메뉴 정보 표시
                     captured_text = captured_output.getvalue()
                     if "Menu mappings" in captured_text:
                         mapping_lines = [line for line in captured_text.split('\n') if "Menu mappings" in line]
@@ -702,11 +869,9 @@ else:
                         missing_lines = [line for line in captured_text.split('\n') if "Missing menus" in line]
                         st.warning(f"⚠️ 데이터베이스에서 찾을 수 없어 제외된 메뉴들:\n" + "\n".join(missing_lines[:10]))
 
-                    # 로드된 데이터 확인 (디버깅용)
                     if st.session_state.weekly_diet and st.session_state.weekly_diet.meals:
                         first_meal_menus = [menu.name for menu in st.session_state.weekly_diet.meals[0].menus]
 
-                    # 임시 파일 정리
                     os.unlink(converted_file_path)
                 except Exception as e:
                     st.error(f"❌ 식단 데이터 로드 중 오류가 발생했습니다: {str(e)}")
@@ -719,7 +884,7 @@ else:
     
         st.session_state.initial_fitness = optimizer.fitness(diet_db, st.session_state.weekly_diet)
         
-        # 초기 식단 비용 계산 (serving_ratio와 실제 구매 비용 반영)
+        # 초기 식단 비용 계산
         current_servings = get_servings()
         st.session_state.initial_cost = calculate_actual_cost(st.session_state.weekly_diet, current_servings)
         days = len(st.session_state.weekly_diet.meals) // 3
@@ -742,7 +907,7 @@ else:
         
         st.session_state.nutrients_data = nutrients_data
 
-    # 캐시된 데이터 사용하여 초기 식단 분석 결과 재표시
+    # 초기 식단 분석 결과 표시
     weekly_diet = st.session_state.weekly_diet
     initial_fitness = st.session_state.initial_fitness
     initial_cost = st.session_state.initial_cost
@@ -751,7 +916,6 @@ else:
     st.subheader("🔎 초기 식단 일일 평균 영양성분")
     st.table(pd.DataFrame(st.session_state.nutrients_data))
     
-    # 서빙 정보 표시
     st.info(f"현재 설정: **{get_servings()}인분**으로 계산됨 (사이드바에서 변경 가능)")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -786,29 +950,23 @@ else:
     
     st.markdown(f"**총 식재료 비용**: {initial_cost:,.0f}원")
 
-    # 최적화 시작 
     st.markdown("---")
     
-    # 세대수 설정
     generations = st.slider("최적화 세대수 설정", min_value=50, max_value=500, value=200, step=50, 
                            help="세대수가 높을수록 더 좋은 결과를 얻을 수 있지만 시간이 더 오래 걸립니다.")
     
     if st.button("🚀 SPEA2 식단 최적화 시작", key="optimize_button"):
-        # 세대수 저장
         st.session_state.generations = generations
         
-        # 시작 시간 기록
         st.session_state.optimization_start_time = datetime.now()
         start_time_for_duration = time.time()
 
         with st.spinner(f'SPEA2 알고리즘 최적화 진행 중... ({generations}세대)'):
             pareto_front = optimizer.optimize(diet_db, weekly_diet, generations)
-            # 완료 시간 기록
             st.session_state.optimization_end_time = datetime.now()
             optimization_duration = time.time() - start_time_for_duration
             st.session_state.optimization_duration = optimization_duration
 
-            # 개선된 식단 찾기
             constraint_satisfied_diets = []
             constraint_violated_diets = []
 
@@ -868,7 +1026,7 @@ else:
                     # 비용 계산 (실제 구매 비용으로 계산)
                     current_servings = get_servings()
                     optimized_cost = calculate_actual_cost(optimized_diet, current_servings)
-                    cost_change = ((optimized_cost - initial_cost) / initial_cost) * 100 if initial_cost > 0 else 0
+                    cost_change = initial_cost - optimized_cost
                     
                     # 개선율 표시
                     col1, col2, col3, col4 = st.columns(4)                    
@@ -902,14 +1060,8 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    st.markdown(f"**총 식재료 비용**: {optimized_cost:,.0f}원 ({cost_change:+.2f}%)")
-                    
-                    # 제약조건 만족 여부 표시
+                    st.markdown(f"**총 식재료 비용**: {optimized_cost:,.0f}원 ({cost_change:,.0f}원)")                    
                     is_valid, violations = validate_weekly_constraints_detailed(optimized_diet, nutrient_constraints)
-                    if is_valid:
-                        st.success("✅ 모든 영양소 제약조건을 만족합니다!")
-                    else:
-                        st.warning(f"⚠️ 제약조건 위반: {', '.join(violations)}")
                     
                     # 메뉴 변경률 표시
                     menu_changes = count_menu_changes(weekly_diet, optimized_diet)
@@ -979,20 +1131,33 @@ else:
                 summary_df = pd.DataFrame(summary_data).set_index("사용자")
                 st.dataframe(summary_df, use_container_width=True)
                 
-                # 엑셀 다운로드 버튼 추가
                 st.markdown("---")
-                col1, col2, col3 = st.columns([1, 2, 1])
-                with col2:
-                    excel_buffer = export_results_to_excel()
-                    if excel_buffer:
-                        filename = f"식단최적화결과_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                excel_buffer = export_results_to_excel()
+                if excel_buffer:
+                    filename = f"식단최적화결과_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+                    col1, col2, col3 = st.columns([1, 1, 1])
+
+                    with col1:
                         st.download_button(
-                            label="📥 최적화 결과 엑셀 다운로드",
+                            label="📥 엑셀 다운로드",
                             data=excel_buffer,
                             file_name=filename,
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
+
+                    with col2:
+                        if st.button("파일 업로드", use_container_width=True):
+                            with st.spinner('파일 업로드 중...'):
+                                excel_buffer.seek(0)
+                                result = upload_to_github(excel_buffer, filename)
+
+                                if result and result.get('success'):
+                                    st.success("✅ 파일 업로드 완료!")
+
+                    with col3:
+                        st.empty()
             else:
                 st.info("최적화 시간 정보가 누락되었습니다.")
 
@@ -1002,7 +1167,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.experimental_rerun()
+            st.rerun()
 
 st.markdown("---")
-st.caption("© 2025 사랑과 선행 요양원 식단 최적화 프로그램. All rights reserved.")
+st.caption("© 2025 요양원 식단 최적화 프로그램. All rights reserved.")

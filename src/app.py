@@ -409,7 +409,10 @@ def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_
         return pd.DataFrame(table_data)
 
 def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
-    github_token = "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"
+    token_file_path = './config/github_token.txt'
+    if os.path.exists(token_file_path):
+        with open(token_file_path, 'r') as f:
+            github_token = f.read().strip()
 
     g = Github(github_token)
     user = g.get_user()

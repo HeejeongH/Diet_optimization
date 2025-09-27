@@ -450,7 +450,6 @@ def export_results_to_excel():
             
             # 메뉴 변경률 계산
             menu_changes = count_menu_changes(st.session_state.weekly_diet, optimized_diet)
-            print(menu_changes)
             
             # 성능 요약 데이터프레임 생성
             performance_data = {
@@ -471,9 +470,9 @@ def export_results_to_excel():
                     f"{optimized_fitness[3]:.2f}",
                     f"{optimized_cost:,.0f}",
                     f"{cost_change:.2f}",
-                    f"{(menu_changes['Breakfast']['changed'] / menu_changes['Breakfast']['total'] * 100):.1f}",
-                    f"{(menu_changes['Lunch']['changed'] / menu_changes['Lunch']['total'] * 100):.1f}",
-                    f"{(menu_changes['Dinner']['changed'] / menu_changes['Dinner']['total'] * 100):.1f}"
+                    #f"{(menu_changes['Breakfast']['changed'] / menu_changes['Breakfast']['total'] * 100):.1f}",
+                    #f"{(menu_changes['Lunch']['changed'] / menu_changes['Lunch']['total'] * 100):.1f}",
+                    #f"{(menu_changes['Dinner']['changed'] / menu_changes['Dinner']['total'] * 100):.1f}"
                 ],
                 "개선율(%)": [
                     f"{improvements[0]:.2f}",

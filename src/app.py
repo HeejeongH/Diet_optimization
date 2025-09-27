@@ -16,7 +16,7 @@ import random
 import io
 from datetime import datetime
 import os
-from github import Github
+from github import Github, Auth
 import base64
 
 # Set page config
@@ -440,7 +440,8 @@ def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-o
         }
 
     try:
-        g = Github(github_token)
+        auth = Auth.Token(github_token)
+        g = Github(auth=auth)
         user = g.get_user()
         repo = user.get_repo(repo_name)
         file_content = base64.b64encode(file_buffer.getvalue()).decode()

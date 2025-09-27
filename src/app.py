@@ -450,6 +450,7 @@ def export_results_to_excel():
             
             # 메뉴 변경률 계산
             menu_changes = count_menu_changes(st.session_state.weekly_diet, optimized_diet)
+            print(menu_changes)
             
             # 성능 요약 데이터프레임 생성
             performance_data = {

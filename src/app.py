@@ -351,7 +351,7 @@ def detect_and_convert_diet_format(uploaded_file):
             st.success("✅ 파일 형태 변환이 완료되었습니다.")
 
             # 매핑 과정 적용
-            mapping_file_path = 'food_mapping.csv'
+            mapping_file_path = './src/food_mapping.csv'
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
                 temp_mapped_path = tmp_mapped.name

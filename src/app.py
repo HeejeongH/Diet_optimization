@@ -410,28 +410,7 @@ def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_
 
 def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
     if not github_token:
-        try:
-            # 여러 경로에서 토큰 파일 찾기
-            possible_paths = [
-                './config/github_token.txt',
-                'config/github_token.txt',
-                './config/github_token.txt'
-            ]
-
-            for token_file_path in possible_paths:
-                if os.path.exists(token_file_path):
-                    with open(token_file_path, 'r') as f:
-                        github_token = f.read().strip()
-                    break
-        except:
-            pass
-
-        # 파일에서 토큰을 찾지 못했다면 Streamlit secrets 시도
-        if not github_token:
-            try:
-                github_token = st.secrets.get("GITHUB_TOKEN")
-            except:
-                pass
+        github_token = st.secrets.get("GITHUB_TOKEN")
 
     if not github_token:
         return {

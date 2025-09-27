@@ -202,7 +202,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -210,7 +210,7 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()
 
 @st.cache_data
 def load_data():
@@ -409,13 +409,39 @@ def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_
         return pd.DataFrame(table_data)
 
 def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
+    # 토큰 우선순위: 직접 전달 → 세션스테이트 → 파일 → secrets
     if not github_token:
-        github_token = st.secrets.get("GITHUB_TOKEN")
+        # 1. 세션 스테이트에서 가져오기 (사이드바 입력)
+        github_token = st.session_state.get('github_token')
+
+        if not github_token:
+            try:
+                # 2. config 파일에서 읽기
+                possible_paths = [
+                    '../config/github_token.txt',
+                    'config/github_token.txt',
+                    './config/github_token.txt'
+                ]
+
+                for token_file_path in possible_paths:
+                    if os.path.exists(token_file_path):
+                        with open(token_file_path, 'r') as f:
+                            github_token = f.read().strip()
+                        break
+            except:
+                pass
+
+            # 3. Streamlit secrets에서 시도
+            if not github_token:
+                try:
+                    github_token = st.secrets.get("GITHUB_TOKEN")
+                except:
+                    pass
 
     if not github_token:
         return {
             'success': False,
-            'error': 'GitHub 토큰이 설정되지 않았습니다. config/github_token.txt 파일을 생성하거나 Streamlit secrets에 GITHUB_TOKEN을 설정해주세요.'
+            'error': 'GitHub 토큰이 설정되지 않았습니다. 사이드바에서 GitHub 토큰을 입력해주세요.'
         }
 
     try:
@@ -810,10 +836,25 @@ with st.sidebar:
                 help="해당 영양소의 중요도를 설정합니다. 높을수록 최적화 시 더 중요하게 고려됩니다."
             )
     nutrient_constraints = NutrientConstraints(
-        min_values=user_min_values, 
-        max_values=user_max_values, 
+        min_values=user_min_values,
+        max_values=user_max_values,
         weights=user_weights
     )
+
+    st.markdown("---")
+    st.subheader("🔑 GitHub 토큰 설정")
+    st.markdown('<p style="font-size: 0.9em; color: #666;">파일 업로드 기능을 사용하려면 GitHub Personal Access Token을 입력하세요.</p>', unsafe_allow_html=True)
+    github_token = st.text_input(
+        "GitHub Token",
+        type="password",
+        placeholder="ghp_xxxxxxxxxxxxxxxx",
+        help="GitHub → Settings → Developer settings → Personal access tokens에서 생성"
+    )
+    if github_token:
+        st.session_state.github_token = github_token
+    else:
+        if 'github_token' in st.session_state:
+            del st.session_state.github_token
 
 # 메인 앱
 st.markdown("---")
@@ -833,13 +874,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.experimental_rerun()
+            st.rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.experimental_rerun()
+        st.rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -1194,8 +1235,8 @@ else:
                                     st.error(f"❌ 파일 업로드 실패: {error_msg}")
 
                                     if 'GitHub 토큰' in error_msg:
-                                        st.info("💡 Streamlit Cloud 앱 설정의 Secrets 탭에서 GITHUB_TOKEN을 설정해주세요.")
-                                        st.code("GITHUB_TOKEN = \"your_token_here\"")
+                                        st.info("💡 사이드바에서 GitHub Personal Access Token을 입력해주세요.")
+                                        st.code("예: ghp_xxxxxxxxxxxxxxxxxxxx")
                                     elif 'Repository not found' in error_msg or '404' in error_msg:
                                         st.info("💡 'diet-optimization-results' 저장소를 먼저 생성해주세요.")
                                     elif 'Bad credentials' in error_msg or '401' in error_msg:
@@ -1227,7 +1268,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.experimental_rerun()
+            st.rerun()
 
 st.markdown("---")
 st.caption("© 2025 요양원 식단 최적화 프로그램. All rights reserved.")

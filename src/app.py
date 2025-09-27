@@ -411,32 +411,7 @@ def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_
 def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
     # 토큰 우선순위: 직접 전달 → 세션스테이트 → 파일 → secrets
     if not github_token:
-        # 1. 세션 스테이트에서 가져오기 (사이드바 입력)
         github_token = st.session_state.get('github_token')
-
-        if not github_token:
-            try:
-                # 2. config 파일에서 읽기
-                possible_paths = [
-                    './config/github_token.txt',
-                    'config/github_token.txt',
-                    './config/github_token.txt'
-                ]
-
-                for token_file_path in possible_paths:
-                    if os.path.exists(token_file_path):
-                        with open(token_file_path, 'r') as f:
-                            github_token = f.read().strip()
-                        break
-            except:
-                pass
-
-            # 3. Streamlit secrets에서 시도
-            if not github_token:
-                try:
-                    github_token = st.secrets.get("GITHUB_TOKEN")
-                except:
-                    pass
 
     if not github_token:
         return {
@@ -758,6 +733,19 @@ with st.sidebar:
         st.image("./assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
+    st.subheader("부여받은 키 설정🔑")
+    github_token = st.text_input(
+        "GitHub Token",
+        type="password",
+        placeholder="ghp_xxxxxxxxxxxxxxxx",
+    )
+    if github_token:
+        st.session_state.github_token = github_token
+    else:
+        if 'github_token' in st.session_state:
+            del st.session_state.github_token
+            
+    '''st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
     top_5_pairs = get_top_n_harmony_pairs(harmony_matrix, menus, 5)
     for i, (menu1, menu2, frequency) in enumerate(top_5_pairs, 1):
@@ -779,10 +767,10 @@ with st.sidebar:
             <span class="emoji-rank">{emoji_rank}</span>
             <strong>{menu}</strong>: {occurrences}회
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)'''
 
     st.markdown("---")
-    st.subheader("🍽️ 서빙 설정")
+    st.subheader("🍽️ 조리 인분 설정")
     servings = st.number_input(
         "서빙 인원수",
         min_value=1,
@@ -840,21 +828,6 @@ with st.sidebar:
         max_values=user_max_values,
         weights=user_weights
     )
-
-    st.markdown("---")
-    st.subheader("🔑 GitHub 토큰 설정")
-    st.markdown('<p style="font-size: 0.9em; color: #666;">파일 업로드 기능을 사용하려면 GitHub Personal Access Token을 입력하세요.</p>', unsafe_allow_html=True)
-    github_token = st.text_input(
-        "GitHub Token",
-        type="password",
-        placeholder="ghp_xxxxxxxxxxxxxxxx",
-        help="GitHub → Settings → Developer settings → Personal access tokens에서 생성"
-    )
-    if github_token:
-        st.session_state.github_token = github_token
-    else:
-        if 'github_token' in st.session_state:
-            del st.session_state.github_token
 
 # 메인 앱
 st.markdown("---")

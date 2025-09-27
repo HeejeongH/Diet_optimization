@@ -1228,8 +1228,6 @@ else:
 
                                 if result and result.get('success'):
                                     st.success("✅ 파일 업로드 완료!")
-                                    if result.get('repo_url'):
-                                        st.info(f"📂 업로드된 위치: {result['repo_url']}")
                                 else:
                                     error_msg = result.get('error', '알 수 없는 오류가 발생했습니다.') if result else '업로드 결과를 받을 수 없습니다.'
                                     st.error(f"❌ 파일 업로드 실패: {error_msg}")

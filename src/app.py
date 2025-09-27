@@ -733,9 +733,9 @@ with st.sidebar:
         st.image("./assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
-    st.subheader("부여받은 키 설정🔑")
+    st.subheader("🔑부여받은 키 설정")
     github_token = st.text_input(
-        "GitHub Token",
+        "평가 참여를 위해 부여받으신 키를 입력해주세요",
         type="password",
         placeholder="ghp_xxxxxxxxxxxxxxxx",
     )
@@ -759,14 +759,14 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🔧 영양소 제한 설정")
-    st.markdown('<p style="font-size: 0.9em; color: #666;">슬라이더를 조정하여 각 영양소의 최소값, 최대값, 가중치를 설정하세요.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size: 0.9em; color: #666;">각 영양소의 최소값, 최대값, 가중치를 설정하세요.</p>', unsafe_allow_html=True)
     user_min_values = {}
     user_max_values = {}
     user_weights = {}
     tabs = st.tabs(list(default_constraints.min_values.keys()))
     for i, nutrient in enumerate(default_constraints.min_values.keys()):
         with tabs[i]:
-            st.markdown(f"### {nutrient} 설정")
+            st.markdown(f"#### {nutrient} 설정")
             min_range = 0.0
             max_range = float(default_constraints.max_values[nutrient] * 2)
             default_min = float(default_constraints.min_values[nutrient])

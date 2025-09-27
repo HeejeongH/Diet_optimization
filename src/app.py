@@ -745,30 +745,6 @@ with st.sidebar:
         if 'github_token' in st.session_state:
             del st.session_state.github_token
             
-    '''st.markdown("---")
-    st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
-    top_5_pairs = get_top_n_harmony_pairs(harmony_matrix, menus, 5)
-    for i, (menu1, menu2, frequency) in enumerate(top_5_pairs, 1):
-        emoji_rank = ['①', '②', '③', '④', '⑤'][i-1]
-        st.markdown(f"""
-        <div class="menu-item" style="font-size: 0.85em;">
-            <span class="emoji-rank">{emoji_rank}</span>
-            <strong>{menu1}</strong> - <strong>{menu2}</strong>: {frequency}회
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.subheader('🍲 가장 많이 나온 메뉴')
-    top_5_menus = menu_counts.most_common(5)
-    for i, (menu, occurrences) in enumerate(top_5_menus, 1):
-        emoji_rank = ['①', '②', '③', '④', '⑤'][i-1]
-        st.markdown(f"""
-        <div class="menu-item" style="font-size: 0.85em;">
-            <span class="emoji-rank">{emoji_rank}</span>
-            <strong>{menu}</strong>: {occurrences}회
-        </div>
-        """, unsafe_allow_html=True)'''
-
     st.markdown("---")
     st.subheader("🍽️ 조리 인분 설정")
     servings = st.number_input(

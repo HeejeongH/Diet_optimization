@@ -202,7 +202,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -210,7 +210,7 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()
+    st.rerun()
 
 @st.cache_data
 def load_data():
@@ -854,13 +854,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.experimental_rerun()
+            st.rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.experimental_rerun()
+        st.rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -1033,7 +1033,24 @@ else:
         st.subheader('🏆 SPEA2 최적화 결과')
         improved_diets = st.session_state.optimization_results
         if improved_diets:
-            diet_tabs = st.tabs([f"제안 식단 {i+1}" for i in range(len(improved_diets))])
+            # 각 식단의 총 개선율 계산 (4개 지표의 평균)
+            total_improvements = []
+            for _, _, improvements in improved_diets:
+                total_improvement = sum(improvements) / len(improvements)
+                total_improvements.append(total_improvement)
+
+            # 가장 높은 개선율을 가진 식단의 인덱스 찾기
+            best_diet_index = total_improvements.index(max(total_improvements))
+
+            # 탭 이름에 별 추가
+            tab_names = []
+            for i in range(len(improved_diets)):
+                if i == best_diet_index:
+                    tab_names.append(f"⭐ 제안 식단 {i+1}")
+                else:
+                    tab_names.append(f"제안 식단 {i+1}")
+
+            diet_tabs = st.tabs(tab_names)
             
             for j, (diet_tab, (optimized_diet, optimized_fitness, improvements)) in enumerate(zip(diet_tabs, improved_diets)):
                 with diet_tab:
@@ -1191,6 +1208,34 @@ else:
 
                                 if result and result.get('success'):
                                     st.success("✅ 파일 업로드 완료!")
+                                    if result.get('repo_url'):
+                                        st.info(f"📂 업로드된 위치: {result['repo_url']}")
+                                else:
+                                    error_msg = result.get('error', '알 수 없는 오류가 발생했습니다.') if result else '업로드 결과를 받을 수 없습니다.'
+                                    st.error(f"❌ 파일 업로드 실패: {error_msg}")
+
+                                    if 'GitHub 토큰' in error_msg:
+                                        st.info("💡 Streamlit Cloud 앱 설정의 Secrets 탭에서 GITHUB_TOKEN을 설정해주세요.")
+                                        st.code("GITHUB_TOKEN = \"your_token_here\"")
+                                    elif 'Repository not found' in error_msg or '404' in error_msg:
+                                        st.info("💡 'diet-optimization-results' 저장소를 먼저 생성해주세요.")
+                                    elif 'Bad credentials' in error_msg or '401' in error_msg:
+                                        st.info("💡 GitHub 토큰이 유효하지 않습니다. 새로운 토큰을 생성해주세요.")
+
+                                    with st.expander("🔧 문제 해결 방법"):
+                                        st.markdown("""
+                                        **1. GitHub Personal Access Token 생성:**
+                                        - GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+                                        - 'Generate new token' 클릭
+                                        - 권한: `repo` (전체 저장소 액세스) 체크
+
+                                        **2. Streamlit Cloud에서 설정:**
+                                        - 앱 설정 → Secrets 탭
+                                        - `GITHUB_TOKEN = "생성한_토큰"` 추가
+
+                                        **3. 저장소 생성:**
+                                        - GitHub에서 'diet-optimization-results' 저장소 생성
+                                        """)
 
                     with col3:
                         st.empty()
@@ -1203,7 +1248,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.experimental_rerun()
+            st.rerun()
 
 st.markdown("---")
 st.caption("© 2025 요양원 식단 최적화 프로그램. All rights reserved.")

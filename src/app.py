@@ -409,39 +409,71 @@ def create_weekly_diet_table(weekly_diet, title="주간 식단표", return_menu_
         return pd.DataFrame(table_data)
 
 def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-optimization-results"):
-    token_file_path = './config/github_token.txt'
-    if os.path.exists(token_file_path):
-        with open(token_file_path, 'r') as f:
-            github_token = f.read().strip()
+    if not github_token:
+        try:
+            # 여러 경로에서 토큰 파일 찾기
+            possible_paths = [
+                '../config/github_token.txt',
+                'config/github_token.txt',
+                './config/github_token.txt'
+            ]
 
-    g = Github(github_token)
-    user = g.get_user()
-    repo = user.get_repo(repo_name)
-    file_content = base64.b64encode(file_buffer.getvalue()).decode()
+            for token_file_path in possible_paths:
+                if os.path.exists(token_file_path):
+                    with open(token_file_path, 'r') as f:
+                        github_token = f.read().strip()
+                    break
+        except:
+            pass
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    file_path = f"results/{today}/{filename}"
+        # 파일에서 토큰을 찾지 못했다면 Streamlit secrets 시도
+        if not github_token:
+            try:
+                github_token = st.secrets.get("GITHUB_TOKEN")
+            except:
+                pass
+
+    if not github_token:
+        return {
+            'success': False,
+            'error': 'GitHub 토큰이 설정되지 않았습니다. config/github_token.txt 파일을 생성하거나 Streamlit secrets에 GITHUB_TOKEN을 설정해주세요.'
+        }
 
     try:
-        existing_file = repo.get_contents(file_path)
-        repo.update_file(
-            file_path,
-            f"Update {filename}",
-            file_content,
-            existing_file.sha
-        )
-    except:
-        repo.create_file(
-            file_path,
-            f"Add {filename}",
-            file_content
-        )
+        g = Github(github_token)
+        user = g.get_user()
+        repo = user.get_repo(repo_name)
+        file_content = base64.b64encode(file_buffer.getvalue()).decode()
 
-    return {
-        'success': True,
-        'repo_url': repo.html_url,
-        'file_path': file_path
-    }
+        today = datetime.now().strftime("%Y-%m-%d")
+        file_path = f"results/{today}/{filename}"
+
+        try:
+            existing_file = repo.get_contents(file_path)
+            repo.update_file(
+                file_path,
+                f"Update {filename}",
+                file_content,
+                existing_file.sha
+            )
+        except:
+            repo.create_file(
+                file_path,
+                f"Add {filename}",
+                file_content
+            )
+
+        return {
+            'success': True,
+            'repo_url': repo.html_url,
+            'file_path': file_path
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'GitHub 업로드 실패: {str(e)}'
+        }
+
 
 def export_results_to_excel():
     if not st.session_state.optimization_complete or not st.session_state.optimization_results:

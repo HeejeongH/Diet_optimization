@@ -10,7 +10,7 @@ from Diet_class import NutrientConstraints, set_servings, get_servings
 from diet_converter import convert_diet_format
 from food_mapper import apply_food_mapping
 import time
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from utils import diet_to_dataframe, count_menu_changes
 import random
 import io
@@ -21,6 +21,9 @@ import base64
 
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
+
+# 한국 시간대 설정
+KST = timezone(timedelta(hours=9))
 
 # Custom CSS
 st.markdown("""
@@ -962,13 +965,14 @@ else:
     
     if st.button("🚀 SPEA2 식단 최적화 시작", key="optimize_button"):
         st.session_state.generations = generations
-        
-        st.session_state.optimization_start_time = datetime.now()
+
+        # 버튼을 누른 시점을 시작 시간으로 기록
+        st.session_state.optimization_start_time = datetime.now(KST)
         start_time_for_duration = time.time()
 
         with st.spinner(f'SPEA2 알고리즘 최적화 진행 중... ({generations}세대)'):
             pareto_front = optimizer.optimize(diet_db, weekly_diet, generations)
-            st.session_state.optimization_end_time = datetime.now()
+            st.session_state.optimization_end_time = datetime.now(KST)
             optimization_duration = time.time() - start_time_for_duration
             st.session_state.optimization_duration = optimization_duration
 

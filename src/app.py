@@ -202,7 +202,7 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.rerun()
+                    st.experiemental_rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -210,14 +210,14 @@ def login_page():
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.rerun()
+    st.experiemental_rerun()
 
 @st.cache_data
 def load_data():
     name = 'jeongseong'
-    diet_db_path = f'../data/sarang_DB/processed_DB/DIET_{name}.xlsx'
-    menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-    ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+    diet_db_path = f'./data/sarang_DB/processed_DB/DIET_{name}.xlsx'
+    menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+    ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
 
     diet_db = load_and_process_data(diet_db_path, menu_db_path, ingre_db_path)
     nutrient_constraints = create_nutrient_constraints()
@@ -253,7 +253,7 @@ def handle_reupload():
         del st.session_state.random_diet
 
 def generate_random_weekly_diet():
-    diet_db_path = '../data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
+    diet_db_path = './data/sarang_DB/processed_DB/DIET_jeongseong.xlsx'
     df = pd.read_excel(diet_db_path)
 
     unique_days = df['Day'].unique()
@@ -302,7 +302,7 @@ def detect_and_convert_diet_format(uploaded_file):
 
         expected_columns = ['Day', 'MealType', 'Menus']
         if all(col in df.columns for col in expected_columns):
-            mapping_file_path = '../src/food_mapping.csv'
+            mapping_file_path = './src/food_mapping.csv'
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
                 temp_mapped_path = tmp_mapped.name
@@ -324,7 +324,7 @@ def detect_and_convert_diet_format(uploaded_file):
             convert_diet_format(temp_input_path, temp_output_path)
             os.unlink(temp_input_path)
 
-            mapping_file_path = '../src/food_mapping.csv'
+            mapping_file_path = './src/food_mapping.csv'
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='_mapped.xlsx') as tmp_mapped:
                 temp_mapped_path = tmp_mapped.name
@@ -714,7 +714,7 @@ diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = lo
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
-        st.image("../assets/logo.png", width=180, use_column_width=True)
+        st.image("./assets/logo.png", width=180, use_column_width=True)
 
     st.markdown("---")
     st.subheader('🍽️ 가장 많이 나온 메뉴 조합')
@@ -818,13 +818,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.rerun()
+            st.experiemental_rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.rerun()
+        st.experiemental_rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -837,8 +837,8 @@ else:
 
     if st.session_state.weekly_diet is None:
         name = 'jeongseong'
-        menu_db_path = f'../data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
-        ingre_db_path = f'../data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
+        menu_db_path = f'./data/sarang_DB/processed_DB/Menu_ingredient_nutrient_{name}.xlsx'
+        ingre_db_path = f'./data/sarang_DB/processed_DB/Ingredient_Price_{name}.xlsx'
         
         if hasattr(st.session_state, 'random_diet') and st.session_state.random_diet:
             random_diet_df = generate_random_weekly_diet()
@@ -1167,7 +1167,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.rerun()
+            st.experiemental_rerun()
 
 st.markdown("---")
 st.caption("© 2025 요양원 식단 최적화 프로그램. All rights reserved.")

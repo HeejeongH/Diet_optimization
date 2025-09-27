@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 from utils import diet_to_dataframe, count_menu_changes
 import random
+import io
 
 # Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
@@ -387,6 +388,134 @@ def detect_and_convert_diet_format(uploaded_file):
             os.unlink(temp_input_path)
         return None
 
+def export_results_to_excel():
+    """최적화 결과를 엑셀 파일로 저장"""
+    if not st.session_state.optimization_complete or not st.session_state.optimization_results:
+        return None
+    
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        
+        # 1. 요약 정보 시트
+        improved_diets = st.session_state.optimization_results
+        all_improvements = [improvements for _, _, improvements in improved_diets]
+        avg_improvements = [sum(imp[i] for imp in all_improvements) / len(all_improvements) for i in range(4)]
+        
+        all_change_rates = []
+        for diet, _, _ in improved_diets:
+            menu_changes = count_menu_changes(st.session_state.weekly_diet, diet)
+            total_menus = sum(counts['total'] for counts in menu_changes.values())
+            total_changed = sum(counts['changed'] for counts in menu_changes.values())
+            change_rate = (total_changed / total_menus * 100) if total_menus > 0 else 0
+            all_change_rates.append(change_rate)
+        overall_change_rate = sum(all_change_rates) / len(all_change_rates) if all_change_rates else 0
+        
+        summary_data = {
+            "항목": ["사용자", "알고리즘", "세대수", "시작시간", "완료시간", "소요시간", "개선된 해 개수", "평균 영양 개선율(%)", "평균 비용 개선율(%)", "평균 조화 개선율(%)", "평균 다양성 개선율(%)", "평균 메뉴 변경률(%)"],
+            "값": [
+                st.session_state.username,
+                "SPEA2",
+                getattr(st.session_state, 'generations', 'N/A'),
+                st.session_state.optimization_start_time.strftime("%Y-%m-%d %H:%M:%S") if st.session_state.optimization_start_time else 'N/A',
+                st.session_state.optimization_end_time.strftime("%Y-%m-%d %H:%M:%S") if st.session_state.optimization_end_time else 'N/A',
+                f"{st.session_state.optimization_duration:.1f}초" if st.session_state.optimization_duration else 'N/A',
+                len(improved_diets),
+                f"{avg_improvements[0]:.2f}",
+                f"{avg_improvements[1]:.2f}",
+                f"{avg_improvements[2]:.2f}",
+                f"{avg_improvements[3]:.2f}",
+                f"{overall_change_rate:.1f}"
+            ]
+        }
+        summary_df = pd.DataFrame(summary_data)
+        summary_df.to_excel(writer, sheet_name='최적화_요약', index=False)
+        
+        # 2. 초기 식단 시트
+        initial_df = diet_to_dataframe(st.session_state.weekly_diet, "초기 식단")
+        initial_df.to_excel(writer, sheet_name='초기_식단', index=False)
+        
+        # 3. 각 제안 식단 시트
+        for j, (optimized_diet, optimized_fitness, improvements) in enumerate(improved_diets):
+            sheet_name = f'제안식단_{j+1}'
+            
+            # 식단 데이터
+            diet_df = diet_to_dataframe(optimized_diet, f"제안 식단 {j+1}")
+            
+            # 성능 지표 추가
+            days = len(optimized_diet.meals) // 3
+            current_servings = get_servings()
+            optimized_cost = calculate_actual_cost(optimized_diet, current_servings)
+            initial_cost = st.session_state.initial_cost
+            cost_change = ((optimized_cost - initial_cost) / initial_cost) * 100 if initial_cost > 0 else 0
+            
+            # 메뉴 변경률 계산
+            menu_changes = count_menu_changes(st.session_state.weekly_diet, optimized_diet)
+            
+            # 성능 요약 데이터프레임 생성
+            performance_data = {
+                "지표": ["영양 점수", "비용 점수", "조화 점수", "다양성 점수", "총 식재료 비용(원)", "비용 변화율(%)", "아침식사 변경률(%)", "점심식사 변경률(%)", "저녁식사 변경률(%)"],
+                "초기값": [
+                    f"{st.session_state.initial_fitness[0]:.2f}",
+                    f"{st.session_state.initial_fitness[1]:.2f}",
+                    f"{st.session_state.initial_fitness[2]:.2f}",
+                    f"{st.session_state.initial_fitness[3]:.2f}",
+                    f"{initial_cost:,.0f}",
+                    "0.0",
+                    "0.0", "0.0", "0.0"
+                ],
+                "최적화값": [
+                    f"{optimized_fitness[0]:.2f}",
+                    f"{optimized_fitness[1]:.2f}",
+                    f"{optimized_fitness[2]:.2f}",
+                    f"{optimized_fitness[3]:.2f}",
+                    f"{optimized_cost:,.0f}",
+                    f"{cost_change:.2f}",
+                    f"{(menu_changes['Breakfast']['changed'] / menu_changes['Breakfast']['total'] * 100):.1f}",
+                    f"{(menu_changes['Lunch']['changed'] / menu_changes['Lunch']['total'] * 100):.1f}",
+                    f"{(menu_changes['Dinner']['changed'] / menu_changes['Dinner']['total'] * 100):.1f}"
+                ],
+                "개선율(%)": [
+                    f"{improvements[0]:.2f}",
+                    f"{improvements[1]:.2f}",
+                    f"{improvements[2]:.2f}",
+                    f"{improvements[3]:.2f}",
+                    f"{cost_change:.2f}",
+                    "-",
+                    "-", "-", "-"
+                ]
+            }
+            performance_df = pd.DataFrame(performance_data)
+            
+            # 영양성분 분석
+            nutrients_data = []
+            for nutrient in nutrient_constraints.min_values.keys():
+                total = sum(sum(menu.get_adjusted_nutrients()[nutrient] for menu in meal.menus) for meal in optimized_diet.meals)
+                daily_avg = total / days
+                min_val = nutrient_constraints.min_values[nutrient]
+                max_val = nutrient_constraints.max_values[nutrient]
+                status = "✅" if min_val <= daily_avg <= max_val else "⚠️"
+                
+                nutrients_data.append({
+                    "영양소": nutrient,
+                    "일일평균": f"{daily_avg:.1f}",
+                    "권장범위": f"{min_val} ~ {max_val}",
+                    "상태": status
+                })
+            nutrients_df = pd.DataFrame(nutrients_data)
+            
+            # 빈 행으로 구분하여 하나의 시트에 저장
+            start_row = 0
+            performance_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
+            start_row += len(performance_df) + 2
+            
+            nutrients_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
+            start_row += len(nutrients_df) + 2
+            
+            diet_df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, index=False)
+    
+    buffer.seek(0)
+    return buffer
+
 # 로그인
 if not st.session_state.logged_in:
     login_page()
@@ -665,6 +794,9 @@ else:
                            help="세대수가 높을수록 더 좋은 결과를 얻을 수 있지만 시간이 더 오래 걸립니다.")
     
     if st.button("🚀 SPEA2 식단 최적화 시작", key="optimize_button"):
+        # 세대수 저장
+        st.session_state.generations = generations
+        
         # 시작 시간 기록
         st.session_state.optimization_start_time = datetime.now()
         start_time_for_duration = time.time()
@@ -846,6 +978,21 @@ else:
                 
                 summary_df = pd.DataFrame(summary_data).set_index("사용자")
                 st.dataframe(summary_df, use_container_width=True)
+                
+                # 엑셀 다운로드 버튼 추가
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    excel_buffer = export_results_to_excel()
+                    if excel_buffer:
+                        filename = f"식단최적화결과_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                        st.download_button(
+                            label="📥 최적화 결과 엑셀 다운로드",
+                            data=excel_buffer,
+                            file_name=filename,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
             else:
                 st.info("최적화 시간 정보가 누락되었습니다.")
 

@@ -985,7 +985,7 @@ else:
         st.session_state.optimization_start_time = datetime.now(KST)
         start_time_for_duration = time.time()
 
-        with st.spinner(f'SPEA2 알고리즘 최적화 진행 중... ({generations}세대)'):
+        with st.spinner(f'식단 최적화 진행 중... ({generations}세대)'):
             pareto_front = optimizer.optimize(diet_db, weekly_diet, generations)
             st.session_state.optimization_end_time = datetime.now(KST)
             optimization_duration = time.time() - start_time_for_duration
@@ -1018,7 +1018,8 @@ else:
 
     # 최적화 결과 표시
     if st.session_state.optimization_complete and st.session_state.optimization_results:
-        st.subheader('🏆 SPEA2 최적화 결과')
+        st.subheader('🏆 최적화 된 식단 🏆')
+        st.caption('⭐️: 가장 많이 개선된 식단이에요!')
         improved_diets = st.session_state.optimization_results
         if improved_diets:
             # 각 식단의 총 개선율 계산 (4개 지표의 평균)

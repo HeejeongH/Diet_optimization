@@ -128,9 +128,24 @@ st.markdown("""
             background-color: #e6f4ea;
             box-shadow: 2px 0px 5px rgba(0,0,0,0.1);
             border-radius: 0 10px 10px 0;}
-    [data-testid="stSidebar"] .stMarkdown h1, 
-    [data-testid="stSidebar"] .stMarkdown h2, 
+    [data-testid="stSidebar"] {
+            background-color: #e6f4ea;
+            box-shadow: 2px 0px 5px rgba(0,0,0,0.1);
+            border-radius: 0 10px 10px 0;}
+    [data-testid="stSidebar"] .stMarkdown h1,
+    [data-testid="stSidebar"] .stMarkdown h2,
     [data-testid="stSidebar"] .stMarkdown h3 {color: #4a6d42;}
+
+    /* 데이터프레임 행 높이 조정 */
+    [data-testid="stDataFrame"] tbody tr {
+        height: 150px !important;
+    }
+    [data-testid="stDataFrame"] tbody td {
+        vertical-align: top !important;
+        padding: 15px !important;
+        line-height: 1.8 !important;
+        white-space: pre-wrap !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 

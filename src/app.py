@@ -1202,27 +1202,12 @@ else:
                                     st.error(f"❌ 파일 업로드 실패: {error_msg}")
 
                                     if 'GitHub 토큰' in error_msg:
-                                        st.info("💡 사이드바에서 GitHub Personal Access Token을 입력해주세요.")
+                                        st.info("💡 사이드바 부여받은 키 설정에 키를 입력해주세요.")
                                         st.code("예: ghp_xxxxxxxxxxxxxxxxxxxx")
                                     elif 'Repository not found' in error_msg or '404' in error_msg:
-                                        st.info("💡 'diet-optimization-results' 저장소를 먼저 생성해주세요.")
+                                        st.info("💡 관리자에게 문의해주세요.")
                                     elif 'Bad credentials' in error_msg or '401' in error_msg:
-                                        st.info("💡 GitHub 토큰이 유효하지 않습니다. 새로운 토큰을 생성해주세요.")
-
-                                    with st.expander("🔧 문제 해결 방법"):
-                                        st.markdown("""
-                                        **1. GitHub Personal Access Token 생성:**
-                                        - GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-                                        - 'Generate new token' 클릭
-                                        - 권한: `repo` (전체 저장소 액세스) 체크
-
-                                        **2. Streamlit Cloud에서 설정:**
-                                        - 앱 설정 → Secrets 탭
-                                        - `GITHUB_TOKEN = "생성한_토큰"` 추가
-
-                                        **3. 저장소 생성:**
-                                        - GitHub에서 'diet-optimization-results' 저장소 생성
-                                        """)
+                                        st.info("💡 관리자에게 문의해주세요.")
 
                     with col2:
                         st.empty()

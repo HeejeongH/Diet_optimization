@@ -10,9 +10,9 @@ def diet_to_dataframe(diet, title: str) -> pd.DataFrame:
             'Lunch': "",
             'Dinner': ""
         }
-        for meal in diet.meals[i*3:(i+1)*3]: 
-            menu_names = "\n".join([
-                f"({menu.category}) {menu.name} ({menu.serving_ratio:.1f}배)" 
+        for meal in diet.meals[i*3:(i+1)*3]:
+            menu_names = '<br>'.join([
+                f"({menu.category}) {menu.name}" + (f" ({menu.serving_ratio:.1f}배)" if menu.serving_ratio != 1.0 else "")
                 for menu in meal.menus
             ])
             day_meals[meal.meal_type.capitalize()] = menu_names

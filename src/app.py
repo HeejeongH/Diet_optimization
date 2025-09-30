@@ -1210,7 +1210,11 @@ else:
                                         st.info("💡 관리자에게 문의해주세요.")
 
                     with col3:
-                        st.link_button('사용성 평가', 'https://docs.google.com/forms/d/e/1FAIpQLScM4wJH1PmNhNAgaOvtawqvQ3KgOQMXEjErl7KzodSOJGfU4w/viewform', use_container_width=True)
+                        st.markdown('''
+                            <a href="https://docs.google.com/forms/d/e/1FAIpQLScM4wJH1PmNhNAgaOvtawqvQ3KgOQMXEjErl7KzodSOJGfU4w/viewform" target="_blank">
+                                <button style="width:100%; padding:0.5rem;">사용성 평가</button>
+                            </a>
+                            ''', unsafe_allow_html=True)
                         st.caption('5주차에만 진행해주세요!')
             else:
                 st.info("최적화 시간 정보가 누락되었습니다.")

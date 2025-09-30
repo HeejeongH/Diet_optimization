@@ -1183,9 +1183,12 @@ else:
                     with col1:
                         st.markdown("""
                             <style>
+                            div.stDownloadButton {
+                                padding-top: 0px;
+                                margin-top: -10px;
+                            }
                             div.stDownloadButton > button {
-                                height: 45px;
-                                margin-top: -30px;
+                                height: 38px;
                             }
                             </style>
                         """, unsafe_allow_html=True)

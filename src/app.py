@@ -1185,7 +1185,7 @@ else:
                             <style>
                             div.stDownloadButton > button {
                                 height: 45px;
-                                margin-top: -20px;
+                                margin-top: -30px;
                             }
                             </style>
                         """, unsafe_allow_html=True)

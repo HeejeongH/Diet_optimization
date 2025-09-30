@@ -1185,10 +1185,10 @@ else:
                             <style>
                             div.stDownloadButton {
                                 padding-top: 0px;
-                                margin-top: -10px;
+                                margin-top: -20px;
                             }
                             div.stDownloadButton > button {
-                                height: 38px;
+                                height: 46px;
                             }
                             </style>
                         """, unsafe_allow_html=True)

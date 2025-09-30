@@ -1189,7 +1189,7 @@ else:
                             use_container_width=True
                         )
 
-                    with col2:
+                    with col3:
                         if st.button("파일 업로드", use_container_width=True):
                             with st.spinner('파일 업로드 중...'):
                                 excel_buffer.seek(0)
@@ -1224,7 +1224,7 @@ else:
                                         - GitHub에서 'diet-optimization-results' 저장소 생성
                                         """)
 
-                    with col3:
+                    with col2:
                         st.empty()
             else:
                 st.info("최적화 시간 정보가 누락되었습니다.")

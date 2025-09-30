@@ -1184,7 +1184,7 @@ else:
                         st.markdown("""
                             <style>
                             div.stDownloadButton > button {
-                                height: 38px;
+                                height: 45px;
                             }
                             </style>
                         """, unsafe_allow_html=True)

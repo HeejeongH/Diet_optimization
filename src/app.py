@@ -978,7 +978,7 @@ else:
     generations = st.slider("최적화 세대수 설정", min_value=50, max_value=500, value=200, step=50, 
                            help="세대수가 높을수록 더 좋은 결과를 얻을 수 있지만 시간이 더 오래 걸립니다.")
     
-    if st.button("🚀 SPEA2 식단 최적화 시작", key="optimize_button"):
+    if st.button("🚀 식단 최적화 시작", key="optimize_button"):
         st.session_state.generations = generations
 
         # 버튼을 누른 시점을 시작 시간으로 기록

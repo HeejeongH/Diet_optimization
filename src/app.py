@@ -1181,6 +1181,13 @@ else:
                     col1, col2, col3 = st.columns([1, 1, 1])
 
                     with col1:
+                        st.markdown("""
+                            <style>
+                            div.stDownloadButton > button {
+                                height: 38px;
+                            }
+                            </style>
+                        """, unsafe_allow_html=True)
                         st.download_button(
                             label="📥 엑셀 다운로드",
                             data=excel_buffer,
@@ -1212,7 +1219,7 @@ else:
                     with col3:
                         st.markdown('''
                             <a href="https://docs.google.com/forms/d/e/1FAIpQLScM4wJH1PmNhNAgaOvtawqvQ3KgOQMXEjErl7KzodSOJGfU4w/viewform" target="_blank">
-                                <button style="width:100%; padding:0.5rem;">사용성 평가</button>
+                                <button style="width:100%; padding:0.5rem; border:none;">사용성 평가</button>
                             </a>
                             ''', unsafe_allow_html=True)
                         st.caption('5주차에만 진행해주세요!')

@@ -442,7 +442,7 @@ def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-o
         g = Github(auth=auth)
         user = g.get_user()
         repo = user.get_repo(repo_name)
-        file_content = base64.b64encode(file_buffer.getvalue()).decode()
+        file_content = file_buffer.getvalue()
 
         today = datetime.now().strftime("%Y-%m-%d")
         file_path = f"results/{today}/{filename}"

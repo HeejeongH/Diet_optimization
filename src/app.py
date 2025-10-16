@@ -16,16 +16,13 @@ import random
 import os
 from github import Github, Auth
 import base64
-from concurrent.futures import ThreadPoolExecutor
-import uuid  # 사용자별 고유 ID 생성용
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import uuid
 
-# Set page config
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
 
-# 한국 시간대 설정
 KST = timezone(timedelta(hours=9))
 
-# Custom CSS (원본 유지)
 st.markdown("""
 <style>
     .reportview-container {
@@ -95,7 +92,6 @@ USERS = {
     "SR013": "test13",
 }
 
-# Session state 초기화 (개선: 사용자별 고유 ID 추가)
 if 'weekly_diet' not in st.session_state:
     st.session_state.weekly_diet = None
 if 'initial_fitness' not in st.session_state:
@@ -120,21 +116,17 @@ if 'optimization_end_time' not in st.session_state:
     st.session_state.optimization_end_time = None
 if 'optimization_duration' not in st.session_state:
     st.session_state.optimization_duration = None
-# 사용자별 고유값 추가
 if 'user_id' not in st.session_state:
     st.session_state.user_id = str(uuid.uuid4())
 if 'user_servings' not in st.session_state:
     st.session_state.user_servings = 55
 
-# 사용자별 servings 관리 함수
 def get_user_servings():
-    """세션별로 servings 값 가져오기"""
     return st.session_state.user_servings
 
 def set_user_servings(value):
-    """세션별로 servings 값 저장"""
     st.session_state.user_servings = value
-    set_servings(value)  # 기존 함수도 호출하여 호환성 유지
+    set_servings(value)
 
 def login_page():
     st.markdown("""
@@ -165,14 +157,14 @@ def login_page():
                 if username in USERS and USERS[username] == password:
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.experimental_rerun()  # st.rerun() -> st.experimental_rerun()으로 수정
+                    st.experimental_rerun()
                 else:
                     st.error("사용자명 또는 비밀번호가 올바르지 않습니다.")
 
 def logout():
     st.session_state.logged_in = False
     st.session_state.username = ""
-    st.experimental_rerun()  # st.rerun() -> st.experimental_rerun()으로 수정
+    st.experimental_rerun()
 
 @st.cache_data
 def load_data():
@@ -242,7 +234,6 @@ def process_mapped_diet_data(file_path):
             standard_df = df[['Day', 'MealType', 'Mapped_Menus']].copy()
             standard_df.rename(columns={'Mapped_Menus': 'Menus'}, inplace=True)
 
-            # 사용자별 고유 파일명 생성
             user_id = st.session_state.user_id
             with tempfile.NamedTemporaryFile(delete=False, suffix=f'_{user_id}_standard.xlsx') as tmp_file:
                 standard_file_path = tmp_file.name
@@ -253,12 +244,11 @@ def process_mapped_diet_data(file_path):
             return file_path
 
     except Exception as e:
-        st.error(f"⌛ 매핑된 데이터 처리 중 오류 발생: {str(e)}")
+        st.error(f"⏱ 매핑된 데이터 처리 중 오류 발생: {str(e)}")
         return file_path
 
 def detect_and_convert_diet_format(uploaded_file):
     try:
-        # 사용자별 고유 파일명 생성
         user_id = st.session_state.user_id
         with tempfile.NamedTemporaryFile(delete=False, suffix=f'_{user_id}.xlsx') as tmp_file:
             tmp_file.write(uploaded_file.getbuffer())
@@ -302,12 +292,12 @@ def detect_and_convert_diet_format(uploaded_file):
             return final_path
 
         else:
-            st.error("⌛ 지원되지 않는 파일 형태입니다.")
+            st.error("⏱ 지원되지 않는 파일 형태입니다.")
             os.unlink(temp_input_path)
             return None
 
     except Exception as e:
-        st.error(f"⌛ 파일 처리 중 오류가 발생했습니다: {str(e)}")
+        st.error(f"⏱ 파일 처리 중 오류가 발생했습니다: {str(e)}")
         if 'temp_input_path' in locals():
             os.unlink(temp_input_path)
         return None
@@ -419,7 +409,6 @@ def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-o
             'error': f'GitHub 업로드 실패: {str(e)}'
         }
 
-# Excel 내보내기 함수
 def export_results_to_excel():
     if not st.session_state.optimization_complete or not st.session_state.optimization_results:
         return None
@@ -428,7 +417,6 @@ def export_results_to_excel():
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
 
-        # 스타일 정의
         header_font = Font(bold=True, size=12, color="FFFFFF")
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         border = Border(
@@ -439,7 +427,6 @@ def export_results_to_excel():
         )
         center_alignment = Alignment(horizontal='center', vertical='center')
 
-        # 1. 요약 정보 시트
         improved_diets = st.session_state.optimization_results
         all_improvements = [improvements for _, _, improvements in improved_diets]
         avg_improvements = [sum(imp[i] for imp in all_improvements) / len(all_improvements) for i in range(4)]
@@ -488,7 +475,6 @@ def export_results_to_excel():
                 cell.border = border
                 cell.alignment = center_alignment
 
-        # 2. 각 제안 식단 시트
         for j, (optimized_diet, optimized_fitness, improvements) in enumerate(improved_diets):
             days = len(optimized_diet.meals) // 3
             current_servings = get_user_servings()
@@ -499,7 +485,6 @@ def export_results_to_excel():
 
             sheet_name = f'💡 제안식단 {j+1}'
 
-            # 식단표
             weekly_diet_table, max_menus_info = create_weekly_diet_table(optimized_diet, f"제안 식단 {j+1}", return_menu_counts=True)
             weekly_diet_table.to_excel(writer, sheet_name=sheet_name, startrow=1, index=False, header=False)
 
@@ -507,7 +492,6 @@ def export_results_to_excel():
             ws['A1'] = f"🍽️ 최적화된 주간 식단표 - 제안 식단 {j+1}"
             ws['A1'].font = Font(bold=True, size=14, color="2F5597")
 
-            # 영양성분 섹션
             nutrients_start = 22
             nutrients_data = []
             for nutrient in nutrient_constraints.min_values.keys():
@@ -529,10 +513,9 @@ def export_results_to_excel():
             ws[f'A{nutrients_start}'] = "🎯 영양성분 분석"
             ws[f'A{nutrients_start}'].font = Font(bold=True, size=14, color="2F5597")
 
-            # 비용 정보 섹션
             cost_start = 30
             cost_data = {
-                "항목": ["총 식재료 비용", "1인당 비용", "1끼당 비용"],
+                "항목": ["총 식재료 비용", "1인당 비용", "1라당 비용"],
                 "금액": [
                     f"{optimized_cost:,.0f}원",
                     f"{optimized_cost/current_servings:,.0f}원" if current_servings > 0 else "N/A",
@@ -545,7 +528,6 @@ def export_results_to_excel():
             ws[f'A{cost_start}'] = "💰 총 식재료 비용 정보"
             ws[f'A{cost_start}'].font = Font(bold=True, size=14, color="2F5597")
 
-            # 성능 지표 비교 섹션
             perform_start = 36
             performance_data = {
                 "지표": ["영양 점수", "비용 점수", "조화 점수", "다양성 점수", "총 식재료 비용(원)"],
@@ -577,7 +559,6 @@ def export_results_to_excel():
             ws[f'A{perform_start}'] = "📈 기존 식단과의 성능 비교"
             ws[f'A{perform_start}'].font = Font(bold=True, size=14, color="2F5597")
 
-            # 열 너비 조정
             for col in ws.columns:
                 max_length = 0
                 column = col[0].column_letter
@@ -593,35 +574,41 @@ def export_results_to_excel():
     buffer.seek(0)
     return buffer
 
-# 병렬 처리 최적화 (간소화 버전)
 def parallel_optimize(optimizer, diet_db, weekly_diet, generations):
-    """간단한 병렬 처리"""
+    """개선된 병렬 처리"""
+    n_workers = min(os.cpu_count() or 2, 4)
+    gens_per_worker = generations // n_workers
+    
     try:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            future1 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
-            future2 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = [
+                executor.submit(optimizer.optimize, diet_db, weekly_diet, gens_per_worker)
+                for _ in range(n_workers)
+            ]
             
-            results1 = future1.result()
-            results2 = future2.result()
+            all_results = []
+            for future in as_completed(futures):
+                all_results.extend(future.result())
             
-            # 결과 합치기
-            all_results = results1 + results2
-            
-            # 중복 제거
-            seen = set()
             unique_results = []
+            seen = set()
+            
             for diet in all_results:
-                diet_hash = hash(str(diet))
+                diet_str = ''.join(str(menu.name) for meal in diet.meals for menu in meal.menus)
+                diet_hash = hash(diet_str)
+                
                 if diet_hash not in seen:
                     seen.add(diet_hash)
                     unique_results.append(diet)
+                    
+                    if len(unique_results) >= 15:
+                        break
             
             return unique_results[:10]
-    except:
-        # 병렬 처리 실패 시 일반 처리
+            
+    except Exception:
         return optimizer.optimize(diet_db, weekly_diet, generations)
 
-# 로그인 처리
 if not st.session_state.logged_in:
     login_page()
     st.stop()
@@ -633,10 +620,8 @@ with col3:
     if st.button("로그아웃", key="logout_btn"):
         logout()
 
-# 데이터 로딩
 diet_db, default_constraints, harmony_matrix, menus, menu_counts, all_menus = load_data()
 
-# 사이드바 (개선: 사용자별 servings 관리)
 with st.sidebar:
     col1, col2, col3 = st.columns([1, 5, 1])
     with col2:
@@ -661,11 +646,11 @@ with st.sidebar:
         "서빙 인원수",
         min_value=1,
         max_value=200,
-        value=get_user_servings(),  # 사용자별 값 사용
+        value=get_user_servings(),
         step=1,
         help="식단을 준비할 인원수를 설정합니다."
     )
-    set_user_servings(servings)  # 사용자별로 저장
+    set_user_servings(servings)
     
     st.markdown("---")
     st.subheader("🔧 영양소 제한 설정")
@@ -715,13 +700,11 @@ with st.sidebar:
         weights=user_weights
     )
 
-# 메인 앱
 st.markdown("---")
 st.title('식단 최적화 프로그램')
 optimizer = SPEA2Optimizer(all_menus, nutrient_constraints, harmony_matrix)
 st.markdown("---")
 
-# 파일 업로드 또는 랜덤 생성
 if not st.session_state.file_uploaded:
     st.subheader('📂 초기 식단 설정')
     
@@ -733,13 +716,13 @@ if not st.session_state.file_uploaded:
             st.session_state.file_uploaded = True
             st.session_state.uploaded_file = None
             st.session_state.random_diet = True
-            st.experimental_rerun()  # st.rerun() -> st.experimental_rerun()으로 수정
+            st.experimental_rerun()
     
     if uploaded_file is not None:
         st.session_state.file_uploaded = True
         st.session_state.uploaded_file = uploaded_file
         st.session_state.random_diet = False
-        st.experimental_rerun()  # st.rerun() -> st.experimental_rerun()으로 수정
+        st.experimental_rerun()
 else:
     col1, col2 = st.columns([15, 1])
     with col1:
@@ -757,7 +740,6 @@ else:
         
         if hasattr(st.session_state, 'random_diet') and st.session_state.random_diet:
             random_diet_df = generate_random_weekly_diet()
-            # 사용자별 고유 파일명 사용
             user_id = st.session_state.user_id
             temp_file = f"temp_random_diet_{user_id}.xlsx"
             random_diet_df.to_excel(temp_file, index=False)
@@ -785,17 +767,16 @@ else:
 
                     os.unlink(converted_file_path)
                 except Exception as e:
-                    st.error(f"⌛ 식단 데이터 로드 중 오류가 발생했습니다: {str(e)}")
+                    st.error(f"⏱ 식단 데이터 로드 중 오류가 발생했습니다: {str(e)}")
                     if os.path.exists(converted_file_path):
                         os.unlink(converted_file_path)
                     st.stop()
             else:
-                st.error("⌛ 파일을 처리할 수 없습니다.")
+                st.error("⏱ 파일을 처리할 수 없습니다.")
                 st.stop()
     
         st.session_state.initial_fitness = optimizer.fitness(diet_db, st.session_state.weekly_diet)
         
-        # 사용자별 servings 사용
         current_servings = get_user_servings()
         st.session_state.initial_cost = calculate_actual_cost(st.session_state.weekly_diet, current_servings)
         days = len(st.session_state.weekly_diet.meals) // 3
@@ -818,7 +799,6 @@ else:
         
         st.session_state.nutrients_data = nutrients_data
 
-    # 초기 식단 분석 결과 표시
     weekly_diet = st.session_state.weekly_diet
     initial_fitness = st.session_state.initial_fitness
     initial_cost = st.session_state.initial_cost
@@ -829,7 +809,6 @@ else:
     
     st.info(f"현재 설정: **{get_user_servings()}인분**으로 계산됨 (사이드바에서 변경 가능)")
     
-    # 성능 지표 표시 (원본 유지)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown(f"""
@@ -873,7 +852,6 @@ else:
         start_time_for_duration = time.time()
 
         with st.spinner(f'식단 최적화 진행 중... ({generations}세대)'):
-            # 병렬 처리로 최적화 실행
             pareto_front = parallel_optimize(optimizer, diet_db, weekly_diet, generations)
             
             st.session_state.optimization_end_time = datetime.now(KST)
@@ -905,13 +883,11 @@ else:
             st.session_state.optimization_results = improved_diets
             st.session_state.optimization_complete = True
 
-    # 최적화 결과 표시
     if st.session_state.optimization_complete and st.session_state.optimization_results:
         st.subheader('🏆 최적화 된 식단 🏆')
         st.caption('⭐️: 가장 많이 개선된 식단이에요!')
         improved_diets = st.session_state.optimization_results
         if improved_diets:
-            # 최고 개선율 찾기
             total_improvements = []
             for _, _, improvements in improved_diets:
                 total_improvement = sum(improvements) / len(improvements)
@@ -932,7 +908,6 @@ else:
                 with diet_tab:
                     st.dataframe(diet_to_dataframe(optimized_diet, f"SPEA2 - 제안 식단 {j+1}"), use_container_width=True)
                     
-                    # 영양성분 분석
                     days = len(optimized_diet.meals) // 3
                     st.subheader("📊 일일 평균 영양성분")
                     nutrients_data = []
@@ -952,12 +927,10 @@ else:
                         })
                     st.table(pd.DataFrame(nutrients_data))
                     
-                    # 사용자별 servings로 비용 계산
                     current_servings = get_user_servings()
                     optimized_cost = calculate_actual_cost(optimized_diet, current_servings)
                     cost_change = initial_cost - optimized_cost
                     
-                    # 개선율 표시
                     col1, col2, col3, col4 = st.columns(4)                    
                     improvement_colors = ['green' if imp > 0 else 'red' for imp in improvements]
                     with col1:
@@ -991,7 +964,6 @@ else:
                     
                     st.markdown(f"**총 식재료 비용**: {optimized_cost:,.0f}원 ({cost_change:,.0f}원)")
                     
-                    # 메뉴 변경율 표시
                     menu_changes = count_menu_changes(weekly_diet, optimized_diet)
                     st.markdown('---')
                     st.markdown('#### 📈 카테고리별 메뉴 변경 비율')
@@ -1018,7 +990,6 @@ else:
                         </div>
                         """, unsafe_allow_html=True)
             
-            # 최적화 요약 정보 (시간 정보가 있을 때만)
             if (st.session_state.optimization_start_time and 
                 st.session_state.optimization_end_time and 
                 st.session_state.optimization_duration):
@@ -1051,11 +1022,9 @@ else:
                 summary_df = pd.DataFrame(summary_data).set_index("사용자")
                 st.dataframe(summary_df, use_container_width=True)
                 
-                # Excel 다운로드 및 GitHub 업로드
                 st.markdown("---")
                 excel_buffer = export_results_to_excel()
                 if excel_buffer:
-                    # 파일명에 고유 ID 추가로 충돌 방지
                     unique_id = str(uuid.uuid4())[:8]
                     filename = f"식단최적화결과_{st.session_state.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{unique_id}.xlsx"
 
@@ -1080,7 +1049,7 @@ else:
                                     st.success("✅ 파일 업로드 완료!")
                                 else:
                                     error_msg = result.get('error', '알 수 없는 오류가 발생했습니다.')
-                                    st.error(f"⌛ 파일 업로드 실패")
+                                    st.error(f"⏱ 파일 업로드 실패")
                                     if 'GitHub 토큰' in error_msg:
                                         st.info("💡 사이드바 부여받은 키 설정에 키를 입력해주세요.")
 
@@ -1098,7 +1067,7 @@ else:
         if st.button('🔄 새로운 최적화 실행'):
             st.session_state.optimization_complete = False
             st.session_state.optimization_results = {}
-            st.experimental_rerun()  # st.rerun() -> st.experimental_rerun()으로 수정
+            st.experimental_rerun()
 
 st.markdown("---")
 st.caption("© 2025 요양원 식단 최적화 프로그램. All rights reserved.")

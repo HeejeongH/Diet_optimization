@@ -16,7 +16,6 @@ import random
 import os
 from github import Github, Auth
 import base64
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import uuid
 
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
@@ -575,32 +574,8 @@ def export_results_to_excel():
     return buffer
 
 def parallel_optimize(optimizer, diet_db, weekly_diet, generations):
-    """최적화된 병렬 처리"""
-    try:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            future1 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
-            future2 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
-            
-            results1 = future1.result()
-            results2 = future2.result()
-            
-            all_results = results1 + results2
-            
-            unique_results = []
-            seen = set()
-            
-            for diet in all_results:
-                diet_hash = id(diet)
-                if diet_hash not in seen:
-                    seen.add(diet_hash)
-                    unique_results.append(diet)
-                    if len(unique_results) >= 5:
-                        break
-            
-            return unique_results
-            
-    except Exception:
-        return optimizer.optimize(diet_db, weekly_diet, generations)[:5]
+    """단순 최적화 실행"""
+    return optimizer.optimize(diet_db, weekly_diet, generations)
 
 if not st.session_state.logged_in:
     login_page()

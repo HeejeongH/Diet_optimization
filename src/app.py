@@ -419,20 +419,177 @@ def upload_to_github(file_buffer, filename, github_token=None, repo_name="diet-o
             'error': f'GitHub 업로드 실패: {str(e)}'
         }
 
-# Excel 내보내기 함수 (원본 유지, 필요 부분만 수정)
+# Excel 내보내기 함수
 def export_results_to_excel():
     if not st.session_state.optimization_complete or not st.session_state.optimization_results:
         return None
 
     from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
     buffer = io.BytesIO()
-    
-    # Excel Writer는 원본과 동일하게 유지
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        # 원본 코드의 Excel 생성 로직 유지 (너무 길어서 생략)
-        # ... (원본 Excel 생성 코드 그대로 사용)
-        pass
-    
+
+        # 스타일 정의
+        header_font = Font(bold=True, size=12, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        center_alignment = Alignment(horizontal='center', vertical='center')
+
+        # 1. 요약 정보 시트
+        improved_diets = st.session_state.optimization_results
+        all_improvements = [improvements for _, _, improvements in improved_diets]
+        avg_improvements = [sum(imp[i] for imp in all_improvements) / len(all_improvements) for i in range(4)]
+
+        all_change_rates = []
+        for diet, _, _ in improved_diets:
+            menu_changes = count_menu_changes(st.session_state.weekly_diet, diet)
+            total_menus = sum(counts['total'] for counts in menu_changes.values())
+            total_changed = sum(counts['changed'] for counts in menu_changes.values())
+            change_rate = (total_changed / total_menus * 100) if total_menus > 0 else 0
+            all_change_rates.append(change_rate)
+        overall_change_rate = sum(all_change_rates) / len(all_change_rates) if all_change_rates else 0
+
+        summary_data = {
+            "항목": ["사용자", "알고리즘", "세대수", "시작시간", "완료시간", "소요시간", "개선된 해 개수", "평균 영양 개선율(%)", "평균 비용 개선율(%)", "평균 조화 개선율(%)", "평균 다양성 개선율(%)", "평균 메뉴 변경율(%)"],
+            "값": [
+                st.session_state.username,
+                "SPEA2",
+                getattr(st.session_state, 'generations', 'N/A'),
+                st.session_state.optimization_start_time.strftime("%Y-%m-%d %H:%M:%S") if st.session_state.optimization_start_time else 'N/A',
+                st.session_state.optimization_end_time.strftime("%Y-%m-%d %H:%M:%S") if st.session_state.optimization_end_time else 'N/A',
+                f"{st.session_state.optimization_duration:.1f}초" if st.session_state.optimization_duration else 'N/A',
+                len(improved_diets),
+                f"{avg_improvements[0]:.2f}" if len(avg_improvements) > 0 else 'N/A',
+                f"{avg_improvements[1]:.2f}" if len(avg_improvements) > 1 else 'N/A',
+                f"{avg_improvements[2]:.2f}" if len(avg_improvements) > 2 else 'N/A',
+                f"{avg_improvements[3]:.2f}" if len(avg_improvements) > 3 else 'N/A',
+                f"{overall_change_rate:.1f}"
+            ]
+        }
+        summary_df = pd.DataFrame(summary_data)
+        summary_df.to_excel(writer, sheet_name='📊 최적화 요약', index=False)
+
+        ws_summary = writer.sheets['📊 최적화 요약']
+        ws_summary.column_dimensions['A'].width = 20
+        ws_summary.column_dimensions['B'].width = 25
+
+        for cell in ws_summary[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+
+        for row in ws_summary.iter_rows(min_row=2, max_row=ws_summary.max_row):
+            for cell in row:
+                cell.border = border
+                cell.alignment = center_alignment
+
+        # 2. 각 제안 식단 시트
+        for j, (optimized_diet, optimized_fitness, improvements) in enumerate(improved_diets):
+            days = len(optimized_diet.meals) // 3
+            current_servings = get_user_servings()
+            optimized_cost = calculate_actual_cost(optimized_diet, current_servings)
+            initial_cost = st.session_state.initial_cost
+            cost_change = initial_cost - optimized_cost
+            menu_changes = count_menu_changes(st.session_state.weekly_diet, optimized_diet)
+
+            sheet_name = f'💡 제안식단 {j+1}'
+
+            # 식단표
+            weekly_diet_table, max_menus_info = create_weekly_diet_table(optimized_diet, f"제안 식단 {j+1}", return_menu_counts=True)
+            weekly_diet_table.to_excel(writer, sheet_name=sheet_name, startrow=1, index=False, header=False)
+
+            ws = writer.sheets[sheet_name]
+            ws['A1'] = f"🍽️ 최적화된 주간 식단표 - 제안 식단 {j+1}"
+            ws['A1'].font = Font(bold=True, size=14, color="2F5597")
+
+            # 영양성분 섹션
+            nutrients_start = 22
+            nutrients_data = []
+            for nutrient in nutrient_constraints.min_values.keys():
+                total = sum(sum(menu.get_adjusted_nutrients()[nutrient] for menu in meal.menus) for meal in optimized_diet.meals)
+                daily_avg = total / days
+                min_val = nutrient_constraints.min_values[nutrient]
+                max_val = nutrient_constraints.max_values[nutrient]
+                status = "✅" if min_val <= daily_avg <= max_val else "⚠️"
+
+                nutrients_data.append({
+                    "영양소": nutrient,
+                    "일일평균": f"{daily_avg:.1f}",
+                    "권장범위": f"{min_val} ~ {max_val}",
+                    "상태": status
+                })
+            nutrients_df = pd.DataFrame(nutrients_data)
+            nutrients_df.to_excel(writer, sheet_name=sheet_name, startrow=nutrients_start, index=False)
+
+            ws[f'A{nutrients_start}'] = "🎯 영양성분 분석"
+            ws[f'A{nutrients_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            # 비용 정보 섹션
+            cost_start = 30
+            cost_data = {
+                "항목": ["총 식재료 비용", "1인당 비용", "1끼당 비용"],
+                "금액": [
+                    f"{optimized_cost:,.0f}원",
+                    f"{optimized_cost/current_servings:,.0f}원" if current_servings > 0 else "N/A",
+                    f"{optimized_cost/(current_servings*21):,.0f}원" if current_servings > 0 else "N/A"
+                ]
+            }
+            cost_df = pd.DataFrame(cost_data)
+            cost_df.to_excel(writer, sheet_name=sheet_name, startrow=cost_start, index=False)
+            
+            ws[f'A{cost_start}'] = "💰 총 식재료 비용 정보"
+            ws[f'A{cost_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            # 성능 지표 비교 섹션
+            perform_start = 36
+            performance_data = {
+                "지표": ["영양 점수", "비용 점수", "조화 점수", "다양성 점수", "총 식재료 비용(원)"],
+                "초기값": [
+                    f"{st.session_state.initial_fitness[0]:.2f}",
+                    f"{st.session_state.initial_fitness[1]:.2f}",
+                    f"{st.session_state.initial_fitness[2]:.2f}",
+                    f"{st.session_state.initial_fitness[3]:.2f}",
+                    f"{initial_cost:,.0f}",
+                ],
+                "최적화값": [
+                    f"{optimized_fitness[0]:.2f}",
+                    f"{optimized_fitness[1]:.2f}",
+                    f"{optimized_fitness[2]:.2f}",
+                    f"{optimized_fitness[3]:.2f}",
+                    f"{optimized_cost:,.0f}",
+                ],
+                "개선율(%)": [
+                    f"{improvements[0]:.2f}",
+                    f"{improvements[1]:.2f}",
+                    f"{improvements[2]:.2f}",
+                    f"{improvements[3]:.2f}",
+                    f"{cost_change:,.0f}원",
+                ]
+            }
+            performance_df = pd.DataFrame(performance_data)
+            performance_df.to_excel(writer, sheet_name=sheet_name, startrow=perform_start, index=False)
+
+            ws[f'A{perform_start}'] = "📈 기존 식단과의 성능 비교"
+            ws[f'A{perform_start}'].font = Font(bold=True, size=14, color="2F5597")
+
+            # 열 너비 조정
+            for col in ws.columns:
+                max_length = 0
+                column = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 25)
+                ws.column_dimensions[column].width = adjusted_width
+
     buffer.seek(0)
     return buffer
 

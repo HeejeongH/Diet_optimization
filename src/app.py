@@ -575,39 +575,32 @@ def export_results_to_excel():
     return buffer
 
 def parallel_optimize(optimizer, diet_db, weekly_diet, generations):
-    """개선된 병렬 처리"""
-    n_workers = min(os.cpu_count() or 2, 4)
-    gens_per_worker = generations // n_workers
-    
+    """최적화된 병렬 처리"""
     try:
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            futures = [
-                executor.submit(optimizer.optimize, diet_db, weekly_diet, gens_per_worker)
-                for _ in range(n_workers)
-            ]
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future1 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
+            future2 = executor.submit(optimizer.optimize, diet_db, weekly_diet, generations // 2)
             
-            all_results = []
-            for future in as_completed(futures):
-                all_results.extend(future.result())
+            results1 = future1.result()
+            results2 = future2.result()
+            
+            all_results = results1 + results2
             
             unique_results = []
             seen = set()
             
             for diet in all_results:
-                diet_str = ''.join(str(menu.name) for meal in diet.meals for menu in meal.menus)
-                diet_hash = hash(diet_str)
-                
+                diet_hash = id(diet)
                 if diet_hash not in seen:
                     seen.add(diet_hash)
                     unique_results.append(diet)
-                    
-                    if len(unique_results) >= 15:
+                    if len(unique_results) >= 5:
                         break
             
-            return unique_results[:10]
+            return unique_results
             
     except Exception:
-        return optimizer.optimize(diet_db, weekly_diet, generations)
+        return optimizer.optimize(diet_db, weekly_diet, generations)[:5]
 
 if not st.session_state.logged_in:
     login_page()

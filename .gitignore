@@ -10,3 +10,7 @@ data/sarang_DB/raw_DB/
 src/results/
 src/__pycache__/
 *.xlsx
+
+# Environment variables (contains sensitive information)
+.env
+.streamlit/secrets.toml

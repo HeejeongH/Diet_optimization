@@ -17,10 +17,46 @@ import os
 from github import Github, Auth
 import base64
 import uuid
+from pathlib import Path
 
 st.set_page_config(page_title="요양원 식단 최적화 프로그램", layout="wide")
 
 KST = timezone(timedelta(hours=9))
+
+# GitHub 토큰 자동 로드
+def load_github_token():
+    """Streamlit Secrets, 환경 변수 또는 .env 파일에서 GitHub 토큰 로드"""
+    # 1. Streamlit Secrets에서 확인 (Streamlit Cloud용)
+    try:
+        if hasattr(st, 'secrets') and 'GITHUB_TOKEN' in st.secrets:
+            return st.secrets['GITHUB_TOKEN']
+    except Exception:
+        pass
+    
+    # 2. 환경 변수에서 확인
+    token = os.getenv('GITHUB_TOKEN')
+    if token:
+        return token
+    
+    # 3. .env 파일에서 확인
+    env_path = Path(__file__).parent.parent / '.env'
+    if env_path.exists():
+        try:
+            with open(env_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        if key.strip() == 'GITHUB_TOKEN':
+                            return value.strip()
+        except Exception:
+            pass
+    
+    # 4. 기본 토큰 (평가용 - 실제 토큰은 .env 또는 Streamlit Secrets에 설정)
+    return ''  # 빈 문자열 반환 시 사용자에게 입력 요청
+
+# 기본 GitHub 토큰 설정
+DEFAULT_GITHUB_TOKEN = load_github_token()
 
 st.markdown("""
 <style>
@@ -119,6 +155,8 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = str(uuid.uuid4())
 if 'user_servings' not in st.session_state:
     st.session_state.user_servings = 55
+if 'github_token' not in st.session_state:
+    st.session_state.github_token = DEFAULT_GITHUB_TOKEN
 
 def get_user_servings():
     return st.session_state.user_servings
@@ -620,16 +658,27 @@ with st.sidebar:
         
     st.markdown("---")
     st.subheader("🔑부여받은 키 설정")
+    
+    # 기본 토큰이 설정되어 있으면 표시
+    if st.session_state.github_token and st.session_state.github_token != "":
+        st.success("✅ 평가용 키가 자동으로 설정되었습니다.")
+        st.caption("필요시 아래에서 다른 키로 변경할 수 있습니다.")
+    else:
+        st.warning("⚠️ GitHub 키가 설정되지 않았습니다. 아래에 입력해주세요.")
+    
     github_token = st.text_input(
-        "평가 참여를 위해 부여받으신 키를 입력해주세요",
+        "GitHub 토큰을 입력해주세요" if not st.session_state.github_token else "다른 키를 사용하려면 입력해주세요 (선택사항)",
         type="password",
         placeholder="ghp_xxxxxxxxxxxxxxxx",
+        value="",
+        help="평가용 키가 환경 변수에 설정되어 있으면 자동 적용됩니다. 없으면 여기에 입력하세요."
     )
+    
     if github_token:
         st.session_state.github_token = github_token
-    else:
-        if 'github_token' in st.session_state:
-            del st.session_state.github_token
+        st.info("🔄 새로운 키가 적용되었습니다.")
+    elif 'github_token' not in st.session_state or not st.session_state.github_token:
+        st.session_state.github_token = DEFAULT_GITHUB_TOKEN
             
     st.markdown("---")
     st.subheader("🍽️ 조리 인분 설정")

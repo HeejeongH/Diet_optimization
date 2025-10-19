@@ -612,19 +612,15 @@ with st.sidebar:
     ]
     
     # 식단표 A
-    file_found = False
-    for path in paths_A:
-        if os.path.exists(path):
-            with open(path, 'rb') as f:
-                st.download_button(
-                    label=path,
-                    data=f,
-                    file_name="File_A.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-            file_found = True
-            break
+    if os.path.exists('./data/File_A.xlsx'):
+        with open(path, 'rb') as f:
+            st.download_button(
+                label="식단표 A 다운로드",
+                data=f,
+                file_name="File_A.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
     
     if not file_found:
         st.warning("⚠️ 식단표 A 파일을 찾을 수 없습니다.")

@@ -600,15 +600,15 @@ with st.sidebar:
     
     # 파일 경로 (app.py가 src 폴더에 있다고 가정)
     paths_A = [
-        '../data/식단표_A_최적화.xlsx',
-        './data/식단표_A_최적화.xlsx',
-        'data/식단표_A_최적화.xlsx'
+        '../data/File_A.xlsx',
+        './data/File_A.xlsx',
+        'data/File_A.xlsx'
     ]
     
     paths_B = [
-        '../data/식단표_B_최적화.xlsx',
-        './data/식단표_B_최적화.xlsx',
-        'data/식단표_B_최적화.xlsx'
+        '../data/File_B.xlsx',
+        './data/File_B.xlsx',
+        'data/File_B.xlsx'
     ]
     
     # 식단표 A
@@ -619,7 +619,7 @@ with st.sidebar:
                 st.download_button(
                     label="식단표 A 다운로드",
                     data=f,
-                    file_name="식단표_A_최적화.xlsx",
+                    file_name="File_A.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
@@ -637,7 +637,7 @@ with st.sidebar:
                 st.download_button(
                     label="식단표 B 다운로드",
                     data=f,
-                    file_name="식단표_B_최적화.xlsx",
+                    file_name="File_B.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )

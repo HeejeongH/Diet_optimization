@@ -598,21 +598,17 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("📥 샘플 식단표 다운로드")
     
-    # 가능한 파일 경로들
+    # 파일 경로 (app.py가 src 폴더에 있다고 가정)
     paths_A = [
+        '../data/식단표_A_최적화.xlsx',
         './data/식단표_A_최적화.xlsx',
-        './data/sarang_DB/식단표_A_최적화.xlsx',
-        './data/sarang_DB/processed_DB/식단표_A_최적화.xlsx',
-        'data/식단표_A_최적화.xlsx',
-        '식단표_A_최적화.xlsx'
+        'data/식단표_A_최적화.xlsx'
     ]
     
     paths_B = [
+        '../data/식단표_B_최적화.xlsx',
         './data/식단표_B_최적화.xlsx',
-        './data/sarang_DB/식단표_B_최적화.xlsx',
-        './data/sarang_DB/processed_DB/식단표_B_최적화.xlsx',
-        'data/식단표_B_최적화.xlsx',
-        '식단표_B_최적화.xlsx'
+        'data/식단표_B_최적화.xlsx'
     ]
     
     # 식단표 A

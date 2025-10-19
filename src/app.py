@@ -615,10 +615,9 @@ with st.sidebar:
     file_found = False
     for path in paths_A:
         if os.path.exists(path):
-            print(path)
             with open(path, 'rb') as f:
                 st.download_button(
-                    label="식단표 A 다운로드",
+                    label=path,
                     data=f,
                     file_name="File_A.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

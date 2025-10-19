@@ -598,29 +598,58 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("📥 샘플 식단표 다운로드")
     
-    try:
-        with open('./data/식단표_A_최적화.xlsx', 'rb') as f:
-            st.download_button(
-                label="식단표 A 다운로드",
-                data=f,
-                file_name="식단표_A_최적화.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-    except:
-        st.warning("식단표 A 파일을 찾을 수 없습니다.")
+    # 가능한 파일 경로들
+    paths_A = [
+        './data/식단표_A_최적화.xlsx',
+        './data/sarang_DB/식단표_A_최적화.xlsx',
+        './data/sarang_DB/processed_DB/식단표_A_최적화.xlsx',
+        'data/식단표_A_최적화.xlsx',
+        '식단표_A_최적화.xlsx'
+    ]
     
-    try:
-        with open('./data/식단표_B_최적화.xlsx', 'rb') as f:
-            st.download_button(
-                label="식단표 B 다운로드",
-                data=f,
-                file_name="식단표_B_최적화.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-    except:
-        st.warning("식단표 B 파일을 찾을 수 없습니다.")
+    paths_B = [
+        './data/식단표_B_최적화.xlsx',
+        './data/sarang_DB/식단표_B_최적화.xlsx',
+        './data/sarang_DB/processed_DB/식단표_B_최적화.xlsx',
+        'data/식단표_B_최적화.xlsx',
+        '식단표_B_최적화.xlsx'
+    ]
+    
+    # 식단표 A
+    file_found = False
+    for path in paths_A:
+        if os.path.exists(path):
+            with open(path, 'rb') as f:
+                st.download_button(
+                    label="식단표 A 다운로드",
+                    data=f,
+                    file_name="식단표_A_최적화.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            file_found = True
+            break
+    
+    if not file_found:
+        st.warning("⚠️ 식단표 A 파일을 찾을 수 없습니다.")
+    
+    # 식단표 B
+    file_found = False
+    for path in paths_B:
+        if os.path.exists(path):
+            with open(path, 'rb') as f:
+                st.download_button(
+                    label="식단표 B 다운로드",
+                    data=f,
+                    file_name="식단표_B_최적화.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            file_found = True
+            break
+    
+    if not file_found:
+        st.warning("⚠️ 식단표 B 파일을 찾을 수 없습니다.")
     
     st.markdown("---")
     st.subheader("🔑부여받은 키 설정")

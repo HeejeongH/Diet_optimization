@@ -609,8 +609,7 @@ with st.sidebar:
         )
         
     # 식단표 B
-    with open('./data/File_B.xlsx', 'rb') as f:
-        print(path)
+    with open('File_B.xlsx', 'rb') as f:
         st.download_button(
             label="식단표 B 다운로드",
             data=f,

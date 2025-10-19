@@ -607,10 +607,7 @@ with st.sidebar:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
-    
-    if not file_found:
-        st.warning("⚠️ 식단표 A 파일을 찾을 수 없습니다.")
-    
+        
     # 식단표 B
     with open('./data/File_B.xlsx', 'rb') as f:
         print(path)
@@ -621,10 +618,7 @@ with st.sidebar:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
-    
-    if not file_found:
-        st.warning("⚠️ 식단표 B 파일을 찾을 수 없습니다.")
-    
+        
     st.markdown("---")
     st.subheader("🔑부여받은 키 설정")
     github_token = st.text_input(

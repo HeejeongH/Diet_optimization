@@ -599,30 +599,28 @@ with st.sidebar:
     st.subheader("📥 샘플 식단표 다운로드")
     
     # 식단표 A
-    if os.path.exists('./data/File_A.xlsx'):
-        with open(path, 'rb') as f:
-            st.download_button(
-                label="식단표 A 다운로드",
-                data=f,
-                file_name="File_A.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
+    with open('./data/File_A.xlsx', 'rb') as f:
+        st.download_button(
+            label="식단표 A 다운로드",
+            data=f,
+            file_name="File_A.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
     
     if not file_found:
         st.warning("⚠️ 식단표 A 파일을 찾을 수 없습니다.")
     
     # 식단표 B
-    if os.path.exists('./data/File_B.xlsx'):
-        with open(path, 'rb') as f:
-            print(path)
-            st.download_button(
-                label="식단표 B 다운로드",
-                data=f,
-                file_name="File_B.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
+    with open('./data/File_B.xlsx', 'rb') as f:
+        print(path)
+        st.download_button(
+            label="식단표 B 다운로드",
+            data=f,
+            file_name="File_B.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
     
     if not file_found:
         st.warning("⚠️ 식단표 B 파일을 찾을 수 없습니다.")

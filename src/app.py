@@ -615,6 +615,7 @@ with st.sidebar:
     file_found = False
     for path in paths_A:
         if os.path.exists(path):
+            print(path)
             with open(path, 'rb') as f:
                 st.download_button(
                     label="식단표 A 다운로드",
@@ -634,6 +635,7 @@ with st.sidebar:
     for path in paths_B:
         if os.path.exists(path):
             with open(path, 'rb') as f:
+                print(path)
                 st.download_button(
                     label="식단표 B 다운로드",
                     data=f,

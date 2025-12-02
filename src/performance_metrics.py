@@ -65,7 +65,6 @@ class PerformanceEvaluator:
         return np.mean(improvements)
 
     def run_single_optimizer(self, optimizer_name: str, generations: int = 100, num_runs: int = 10, save_path: str = None):
-        """단일 알고리즘 실행"""
         if optimizer_name not in self.optimizers:
             raise ValueError(f"Optimizer {optimizer_name} not found")
         
@@ -103,14 +102,12 @@ class PerformanceEvaluator:
             
             print(f"Run {run + 1}/{num_runs} completed")
         
-        # 결과 저장
         if save_path:
             self.save_single_result(optimizer_name, results, save_path)
         
         return results
 
     def save_single_result(self, optimizer_name: str, results: Dict, save_path: str):
-        """단일 알고리즘 결과 저장"""
         os.makedirs(save_path, exist_ok=True)
         filename = os.path.join(save_path, f"{optimizer_name}_results.pkl")
         with open(filename, 'wb') as f:
@@ -118,13 +115,11 @@ class PerformanceEvaluator:
         print(f"Results saved to {filename}")
 
     def load_single_result(self, optimizer_name: str, save_path: str) -> Dict:
-        """단일 알고리즘 결과 로드"""
         filename = os.path.join(save_path, f"{optimizer_name}_results.pkl")
         with open(filename, 'rb') as f:
             return pickle.load(f)
 
     def combine_results(self, save_path: str, optimizer_names: List[str] = None) -> Dict:
-        """저장된 결과들을 합치기"""
         if optimizer_names is None:
             optimizer_names = list(self.optimizers.keys())
         
@@ -207,8 +202,6 @@ class PerformanceEvaluator:
         return statistical_results
 
     def save_combined_results_to_excel(self, results: Dict, filename: str = 'combined_optimization_results.xlsx'):
-        """합쳐진 결과를 엑셀로 저장"""
-        # Calculate statistics
         statistics = {}
         for name in results.keys():
             statistics[name] = {

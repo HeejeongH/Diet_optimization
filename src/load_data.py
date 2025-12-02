@@ -198,18 +198,20 @@ def load_all_menus(menu_db_path: str, ingre_db_path: str) -> List[Menu]:
     return list(menu_objects.values())
 
 def create_nutrient_constraints() -> NutrientConstraints:
+    # 현실적인 제약조건으로 완화 (jeongseong 데이터 기반)
+    # serving_ratio 0.6~0.9 범위에서 제약조건 만족 가능하도록 조정
     min_values = {
         '에너지(kcal)': 1440,
-        '탄수화물(g)': 234,
+        '탄수화물(g)': 220,    # 234 → 220 (하향)
         '단백질(g)': 54,
         '지방(g)': 32,
-        '식이섬유(g)': 20,
+        '식이섬유(g)': 12,     # 20 → 12 (하향)
     }
     max_values = {
-        '에너지(kcal)': 2200,
-        '탄수화물(g)': 357.5,
-        '단백질(g)': 82.5,
-        '지방(g)': 60,
+        '에너지(kcal)': 2600,  # 2200 → 2600 (상향)
+        '탄수화물(g)': 400,    # 357.5 → 400 (상향)
+        '단백질(g)': 100,      # 82.5 → 100 (상향)
+        '지방(g)': 85,         # 60 → 85 (상향)
         '식이섬유(g)': 50,
     }
     weights = {

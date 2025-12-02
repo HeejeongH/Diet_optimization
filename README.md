@@ -76,30 +76,35 @@ diet_optimization/
 │   ├── spea2_optimizer.py        # SPEA2 implementation
 │   ├── emoea_optimizer.py        # ε-MOEA implementation
 │   ├── performance_metrics.py    # Performance evaluation metrics
+│   ├── utils.py                  # Utility functions
+│   ├── diet_converter.py         # Diet format conversion
+│   ├── food_mapper.py            # Food name mapping
 │   └── app.py                    # Streamlit web application
 │
-├── visualization/                # Figure generation
-│   └── generate_figures.py       # Paper figures generator
-│
 ├── data/                         # Data files
-│   ├── menu_db.xlsx              # Menu database (nutrients, ingredients)
-│   └── ingredient_prices.xlsx    # Ingredient pricing data
+│   └── sarang_DB/                # Main database
+│       └── processed_DB/         # Processed data files
+│           ├── DIET_jeongseong.xlsx              # Historical diet data
+│           ├── Menu_ingredient_nutrient_jeongseong.xlsx  # Menu database
+│           └── Ingredient_Price_jeongseong.xlsx  # Ingredient prices
 │
-├── config/                       # Configuration files
-│   └── optimization_config.json  # Algorithm parameters
+├── visualization/                # Figure generation
+│   ├── generate_figures.py       # Paper figures generator
+│   ├── figures/                  # Generated figures (auto-created)
+│   │   ├── figure1_radar_chart.png (& .pdf)
+│   │   ├── figure2_hypervolume_boxplots.png (& .pdf)
+│   │   ├── figure3_spacing_comparison.png (& .pdf)
+│   │   ├── figure4_diversity_convergence.png (& .pdf)
+│   │   ├── figure5_execution_time.png (& .pdf)
+│   │   └── figure6_significance_heatmap.png (& .pdf)
+│   └── README.md                 # Visualization documentation
 │
-├── results/                      # Optimization results
-│   ├── optimization_results.xlsx # Raw performance data
-│   └── final_comparison.xlsx     # Statistical analysis
+├── docs/                         # Documentation
+│   ├── USAGE.md                  # Usage guide
+│   └── paper/                    # Paper-related documentation
+│       └── README.md             # Research paper information
 │
-├── figures/                      # Generated figures (auto-created)
-│   ├── figure1_radar_chart.png
-│   ├── figure2_hypervolume_boxplots.png
-│   ├── figure3_spacing_comparison.png
-│   ├── figure4_diversity_convergence.png
-│   ├── figure5_execution_time.png
-│   └── figure6_significance_heatmap.png
-│
+├── .gitignore                    # Git ignore rules
 ├── requirements.txt              # Python dependencies
 └── README.md                     # This file
 ```
@@ -193,31 +198,33 @@ Open browser at `http://localhost:8501`
 
 ### 1. Data Preparation
 
-#### Menu Database Format (`menu_db.xlsx`)
+All data files are located in `data/sarang_DB/processed_DB/`.
 
-**Sheet: 'ingredient'**
-| Menu | Ingredient | Amount_g |
-|------|-----------|----------|
-| 쌀밥 | 쌀 | 100 |
-| 미역국 | 미역 | 20 |
+#### Diet Database (`DIET_jeongseong.xlsx`)
 
-**Sheet: 'nutrient'**
-| Menu | 에너지(kcal) | 탄수화물(g) | 단백질(g) | 지방(g) | 식이섬유(g) |
-|------|-----------|----------|---------|--------|----------|
-| 쌀밥 | 300 | 65 | 6 | 1 | 1.5 |
+Historical diet data for 13 weeks, 7 days per week.
 
-**Sheet: 'category'**
-| Menu | Category |
-|------|----------|
-| 쌀밥 | main |
-| 미역국 | soup |
+**Columns:**
+- `week_num`: Week number (1-13)
+- `day`: Day of week (월-일)
+- `밥, 국, 찌개, 반찬1-5`: Menu items
 
-#### Ingredient Prices Format (`ingredient_prices.xlsx`)
+#### Menu Database (`Menu_ingredient_nutrient_jeongseong.xlsx`)
 
-| Ingredient | 단가(원/g) | 용량(g) |
-|-----------|----------|--------|
-| 쌀 | 5.0 | 5000 |
-| 미역 | 15.0 | 100 |
+**Sheet 1: 'ingredient'**
+- Menu items with ingredients and amounts
+
+**Sheet 2: 'nutrient'**
+- Nutritional information per menu item
+
+**Sheet 3: 'category'**
+- Menu categories (main, soup, side, etc.)
+
+#### Ingredient Prices (`Ingredient_Price_jeongseong.xlsx`)
+
+- Ingredient names with prices and package sizes
+
+**See [docs/USAGE.md](docs/USAGE.md) for detailed format specifications.**
 
 ### 2. Configure Optimization
 
@@ -316,9 +323,18 @@ python generate_figures.py
 
 ---
 
+## 📚 Documentation
+
+- **[Main README](README.md)** - Project overview (this file)
+- **[Usage Guide](docs/USAGE.md)** - Detailed usage instructions
+- **[Paper Documentation](docs/paper/README.md)** - Research results and figures
+- **[Visualization Guide](visualization/README.md)** - Figure generation details
+
+---
+
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines.
+We welcome contributions!
 
 ### How to Contribute
 
@@ -353,8 +369,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Contact
 
 For questions or collaborations:
-- Email: [your.email@example.com]
 - GitHub Issues: [Create an issue](https://github.com/HeejeongH/Diet_optimization/issues)
+- Repository: https://github.com/HeejeongH/Diet_optimization
 
 ---
 

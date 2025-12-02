@@ -1,16 +1,52 @@
+# Python
 __pycache__/
-*.pyc
-.DS_Store
-*.xlsx
-!data/sarang_DB/processed_DB/DIET_jeongseong.xlsx
-!data/sarang_DB/processed_DB/Menu_ingredient_nutrient_jeongseong.xlsx
-!data/sarang_DB/processed_DB/Ingredient_Price_jeongseong.xlsx
-!data/Weekly_diet_ex.xlsx
-data/sarang_DB/raw_DB/
-src/results/
-src/__pycache__/
-*.xlsx
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
 
-# Environment variables (contains sensitive information)
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files (except specific allowed files)
+*.xlsx
+!data/sarang_DB/processed_DB/*.xlsx
+
+# Results and output
+results/
+output/
+*.log
+
+# Secrets and sensitive info
 .env
 .streamlit/secrets.toml
+config/github_token.txt
+*.pem
+*.key
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Documentation build
+docs/_build/

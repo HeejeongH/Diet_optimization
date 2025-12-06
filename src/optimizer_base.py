@@ -83,7 +83,7 @@ class DietOptimizer(ABC):
             valid_constraint_count = 0
             current_valid_solutions = []
             
-            print(f"\n=== 종료 조건 체크 (해 개수: {len(current_solutions)}) ===")
+            # 종료 조건 체크 (상세 출력 생략)
 
             for i, diet in enumerate(current_solutions):
                 current_fitness = self.fitness(diet_db, diet)
@@ -93,10 +93,11 @@ class DietOptimizer(ABC):
                 if constraint_satisfied:
                     valid_constraint_count += 1
                     
-                print(f"해 {i+1}: {improvements}가지 개선, 제약조건 {'만족' if constraint_satisfied else '위반'} {current_fitness}")
+                # 개별 해 출력 비활성화 (너무 많은 로그 생성)
+                # print(f"해 {i+1}: {improvements}가지 개선, 제약조건 {'만족' if constraint_satisfied else '위반'} {current_fitness}")
                 
-                if violations:
-                    print(f"  위반사항: {', '.join(violations)}")
+                # if violations:
+                #     print(f"  위반사항: {', '.join(violations)}")
 
                 # 3가지 이상 개선된 해는 무조건 backup에 저장 (중복 체크 완화)
                 if improvements >= 3:

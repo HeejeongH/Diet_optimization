@@ -75,7 +75,8 @@ class DietOptimizer(ABC):
         cost_score = evaluate_cost(diet_db, weeklydiet)
         harmony_score = evaluate_harmony(diet_db, weeklydiet)
         diversity_score = evaluate_diversity(weeklydiet)
-        return [nutrition_score, cost_score, harmony_score, diversity_score]
+        # Convert all to Python float for consistent output formatting
+        return [float(nutrition_score), float(cost_score), float(harmony_score), float(diversity_score)]
         
     def check_termination(self, initial_fitness, current_solutions, diet_db):
             improved_count = 0

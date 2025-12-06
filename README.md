@@ -101,19 +101,37 @@ openpyxl>=3.1.0
 
 ## 📖 사용 방법
 
-### Jupyter Notebook으로 실행 (추천)
+### 논문용 알고리즘 성능 비교 실험 (main.ipynb)
+
+**main.ipynb**는 **논문용 알고리즘 성능 비교 실험**을 수행합니다:
 
 ```bash
 cd src
 jupyter notebook main.ipynb
 ```
 
-**main.ipynb**를 열고 모든 셀을 실행하면 다음이 수행됩니다:
+**실험 설계:**
+- **알고리즘**: NSGA-II, NSGA-III, SPEA2, ε-MOEA
+- **반복 횟수**: 각 알고리즘당 10회 독립 실행
+- **세대 수**: 100 generations
+- **평가 지표**: Hypervolume, Spacing, Diversity, Convergence, Execution Time
 
-1. **데이터 로딩** - 식단, 메뉴, 식재료 데이터 불러오기
-2. **4개 알고리즘 실행** - 각각 100세대 최적화
-3. **성능 비교** - 10회 반복 실행으로 통계적 비교
-4. **결과 저장** - Excel 파일로 결과 내보내기
+**출력:**
+- `optimization_comparison_results.xlsx` - 성능 비교 데이터 (통계 분석용)
+
+### 실무용 식단 개선 제안 (app.py)
+
+**app.py**는 **실무 활용을 위한 식단 개선 제안**을 제공합니다:
+
+```bash
+cd src
+python app.py
+```
+
+**기능:**
+- 초기 식단을 입력받아 개선된 식단 최대 5개 제안
+- 영양, 비용, 조화, 다양성 점수 개선율 표시
+- 카테고리별 메뉴 변경 비율 분석
 
 ### Python 스크립트로 실행
 

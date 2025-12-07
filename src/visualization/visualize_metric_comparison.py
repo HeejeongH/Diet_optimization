@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle, FancyBboxPatch
 import seaborn as sns
+from pathlib import Path
+
+# Create output directory
+output_dir = Path('results/figures/metric_examples')
+output_dir.mkdir(parents=True, exist_ok=True)
 
 # Set style
 plt.rcParams['font.family'] = 'DejaVu Sans'
@@ -285,9 +290,9 @@ plt.suptitle('📊 다목적 최적화 성능 지표 비교 시각화 (METOR 프
             fontsize=16, fontweight='bold', y=0.995)
 
 # Save
-plt.savefig('docs/paper/metric_examples/comprehensive_metrics_comparison.png', 
+plt.savefig('results/figures/metric_examples/comprehensive_metrics_comparison.png', 
            dpi=300, bbox_inches='tight')
-plt.savefig('docs/paper/metric_examples/comprehensive_metrics_comparison.pdf', 
+plt.savefig('results/figures/metric_examples/comprehensive_metrics_comparison.pdf', 
            bbox_inches='tight')
 print("✅ Generated: comprehensive_metrics_comparison.png/pdf")
 plt.close()
@@ -349,10 +354,10 @@ ax.text(0.98, 0.02, explanation, fontsize=11, ha='right', va='bottom',
        bbox=dict(boxstyle='round,pad=0.8', facecolor='#d5f4e6', alpha=0.9))
 
 plt.tight_layout()
-plt.savefig('docs/paper/metric_examples/hypervolume_detailed.png', dpi=300, bbox_inches='tight')
-plt.savefig('docs/paper/metric_examples/hypervolume_detailed.pdf', bbox_inches='tight')
+plt.savefig('results/figures/metric_examples/hypervolume_detailed.png', dpi=300, bbox_inches='tight')
+plt.savefig('results/figures/metric_examples/hypervolume_detailed.pdf', bbox_inches='tight')
 print("✅ Generated: hypervolume_detailed.png/pdf")
 plt.close()
 
 print("\n✅ All metric comparison visualizations generated successfully!")
-print("📁 Location: /home/user/diet_optimization_clean/docs/paper/metric_examples/")
+print("📁 Location: results/figures/metric_examples/")

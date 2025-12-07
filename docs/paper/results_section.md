@@ -85,6 +85,83 @@ Spacing 메트릭은 파레토 프론트 상의 해들이 얼마나 균일하게
 SPEA2의 우수한 계산 효율성은 Strength-based fitness assignment와 truncation operator의 효율적인 구현에 기인한 것으로 분석된다. NSGA-II와 NSGA-III의 큰 표준편차는 일부 실행에서 조기 종료 조건이 늦게 만족되어 630초 이상 소요된 경우가 있었기 때문이다.
 
 
+### 4.6. Statistical Significance Analysis
+
+#### 4.6.1. Normality Test
+
+Shapiro-Wilk normality test 결과, 일부 데이터가 정규분포를 따르지 않는 것으로 나타났다 (표 2). 특히 HYPERVOLUME 메트릭에서 NSGA-II (W=0.716, p=0.001)와 SPEA2 (W=0.670, p<0.001)가, EXECUTION_TIME 메트릭에서는 모든 알고리즘이 정규성 가정을 위반하였다. 따라서 비모수 검정(non-parametric tests)인 Kruskal-Wallis H-test와 Mann-Whitney U test를 사용하였다.
+
+**표 2. Normality Test Results (Shapiro-Wilk test)**
+
+| Metric | Algorithm | W-statistic | p-value | Normal? |
+|--------|-----------|-------------|---------|---------|
+| HYPERVOLUME | NSGA-II | 0.716 | 0.001*** | No |
+| HYPERVOLUME | NSGA-III | 0.851 | 0.060 | Yes |
+| HYPERVOLUME | SPEA2 | 0.670 | <0.001*** | No |
+| HYPERVOLUME | ε-MOEA | 0.940 | 0.550 | Yes |
+| EXECUTION_TIME | All | <0.650 | <0.001*** | No |
+
+*** p < 0.001
+
+
+#### 4.6.2. Overall Differences (Kruskal-Wallis H-test)
+
+Kruskal-Wallis H-test 결과, 모든 메트릭에서 알고리즘 간 통계적으로 유의한 차이가 발견되었다 (표 3).
+
+**표 3. Kruskal-Wallis H-test Results**
+
+| Metric | H-statistic | p-value | Significance |
+|--------|-------------|---------|--------------|
+| HYPERVOLUME | 14.407 | 0.0024 | ** |
+| SPACING | 12.799 | 0.0051 | ** |
+| DIVERSITY | 11.205 | 0.0107 | * |
+| CONVERGENCE | 9.739 | 0.0209 | * |
+| EXECUTION_TIME | 24.686 | <0.001 | *** |
+
+*** p<0.001, ** p<0.01, * p<0.05
+
+가장 강한 차이는 EXECUTION_TIME (H=24.686, p<0.001)에서 관찰되었으며, HYPERVOLUME (H=14.407, p=0.0024)과 SPACING (H=12.799, p=0.0051)에서도 매우 유의한 차이가 나타났다.
+
+
+#### 4.6.3. Pairwise Comparisons (Mann-Whitney U test)
+
+Mann-Whitney U test를 사용한 쌍별 비교 결과, 주요 발견사항은 다음과 같다 (표 4):
+
+**표 4. Significant Pairwise Comparisons (Mann-Whitney U test with Bonferroni correction)**
+
+| Metric | Comparison | p-value | Cliff's δ | Effect Size | Significant* |
+|--------|------------|---------|-----------|-------------|--------------|
+| **HYPERVOLUME** |
+| | NSGA-II vs ε-MOEA | 0.0028 | 0.800 | Large | ✓ |
+| | NSGA-III vs ε-MOEA | 0.0073 | 0.720 | Large | ✓ |
+| | SPEA2 vs ε-MOEA | 0.0017 | 0.840 | Large | ✓ |
+| **SPACING** |
+| | NSGA-III vs ε-MOEA | 0.0022 | -0.820 | Large | ✓ |
+| | SPEA2 vs ε-MOEA | 0.0058 | -0.740 | Large | ✓ |
+| **DIVERSITY** |
+| | NSGA-II vs ε-MOEA | 0.0058 | -0.740 | Large | ✓ |
+| | NSGA-III vs ε-MOEA | 0.0058 | -0.740 | Large | ✓ |
+| **EXECUTION_TIME** |
+| | NSGA-II vs ε-MOEA | <0.001 | -0.980 | Large | ✓ |
+| | NSGA-III vs ε-MOEA | <0.001 | -0.920 | Large | ✓ |
+| | SPEA2 vs ε-MOEA | <0.001 | -1.000 | Large | ✓ |
+
+*After Bonferroni correction (α = 0.05/6 = 0.0083)
+
+**주요 발견:**
+
+1. **ε-MOEA의 열등한 성능**: ε-MOEA는 모든 메트릭에서 다른 알고리즘들에 비해 통계적으로 유의하게 낮은 성능을 보였으며, effect size도 대부분 large (|δ| > 0.474)로 나타났다.
+
+2. **NSGA-II, NSGA-III, SPEA2의 유사성**: 세 알고리즘 간에는 대부분의 메트릭에서 통계적으로 유의한 차이가 발견되지 않았다. 특히 HYPERVOLUME에서 NSGA-II vs NSGA-III (p=0.678), NSGA-II vs SPEA2 (p=0.121), NSGA-III vs SPEA2 (p=0.791) 모두 유의하지 않았다.
+
+3. **EXECUTION_TIME의 극명한 차이**: SPEA2와 다른 알고리즘 간 실행 시간 차이는 매우 유의하였으며 (p<0.001), Cliff's Delta 값이 -1.000 (SPEA2 vs ε-MOEA)에 달해 실질적으로도 매우 큰 차이를 나타냈다.
+
+
+#### 4.6.4. Effect Size Interpretation
+
+Cliff's Delta 효과 크기 분석 결과, 대부분의 유의한 차이는 large effect size (|δ| ≥ 0.474)를 동반하였다. 이는 통계적 유의성뿐만 아니라 실질적으로도 의미 있는 차이임을 시사한다. 특히 EXECUTION_TIME에서 SPEA2는 ε-MOEA 대비 완벽한 우위(δ=-1.000)를 보였으며, HYPERVOLUME에서도 SPEA2는 ε-MOEA에 비해 매우 큰 우위(δ=0.840)를 나타냈다.
+
+
 ## Discussion
 
 ### 5.1. Algorithm Performance Summary

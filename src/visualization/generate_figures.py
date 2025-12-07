@@ -12,7 +12,7 @@ Figures Generated:
 - Figure 3: Spacing Comparison Bar Chart
 - Figure 4: Diversity vs Convergence Scatter Plot
 - Figure 5: Execution Time Comparison
-- Figure 6: Statistical Significance Heatmap
+- Table 1: Performance Summary Table
 
 Author: Diet Optimization Research Team
 Date: 2024-12
@@ -345,10 +345,10 @@ def figure5_execution_time(output_dir):
 
 def figure6_performance_summary(output_dir):
     """
-    Figure 6: Performance Summary Table Visualization
+    Figure 6: Performance Summary Table Visualization (Table 1)
     Shows comprehensive comparison of all metrics
     """
-    print("Generating Figure 6: Performance Summary...")
+    print("Generating Table 1: Performance Summary...")
     
     fig, ax = plt.subplots(figsize=(14, 8))
     ax.axis('tight')
@@ -405,14 +405,15 @@ def figure6_performance_summary(output_dir):
         cell.set_facecolor('#2ecc71')
         cell.set_text_props(weight='bold')
     
-    ax.set_title('Algorithm Performance Comparison Summary\n(Mean±Std, n=10 runs)', 
+    ax.set_title('Table 1: Algorithm Performance Comparison Summary\n(Mean±Std, n=10 runs)', 
                 fontsize=14, weight='bold', pad=20)
     
     plt.tight_layout()
-    plt.savefig(output_dir / 'figure6_performance_summary.png', dpi=300, bbox_inches='tight')
-    plt.savefig(output_dir / 'figure6_performance_summary.pdf', bbox_inches='tight')
+    # Save as table1 instead of figure6
+    plt.savefig(output_dir / 'table1.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'table1.pdf', bbox_inches='tight')
     plt.close()
-    print("✓ Figure 6 saved")
+    print("✓ Table 1 saved")
 
 
 def generate_all_figures():
@@ -437,7 +438,7 @@ def generate_all_figures():
     print("="*60)
     print(f"\nFiles saved in: {output_dir.absolute()}")
     print("\nGenerated files:")
-    for file in sorted(output_dir.glob('figure*.png')):
+    for file in sorted(output_dir.glob('figure*.png')) + sorted(output_dir.glob('table*.png')):
         print(f"  - {file.name}")
     print("\nBoth PNG (for Word) and PDF (for LaTeX) versions created.")
 

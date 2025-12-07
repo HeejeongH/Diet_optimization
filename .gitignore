@@ -24,14 +24,13 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Data files (except specific allowed files)
-*.xlsx
-!data/sarang_DB/processed_DB/*.xlsx
-
 # Results and output
 results/
 output/
 *.log
+
+data/sarang_DB
+data/단가
 
 # Secrets and sensitive info
 .env

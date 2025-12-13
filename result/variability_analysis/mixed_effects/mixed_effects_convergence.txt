@@ -1,0 +1,17 @@
+             Mixed Linear Model Regression Results
+================================================================
+Model:                MixedLM    Dependent Variable:    Value   
+No. Observations:     400        Method:                REML    
+No. Groups:           10         Scale:                 0.0545  
+Min. group size:      40         Log-Likelihood:        -16.8143
+Max. group size:      40         Converged:             Yes     
+Mean group size:      40.0                                      
+----------------------------------------------------------------
+                      Coef.  Std.Err.   z    P>|z| [0.025 0.975]
+----------------------------------------------------------------
+Intercept              0.693    0.134  5.152 0.000  0.429  0.956
+Algorithm[T.NSGA-III] -0.038    0.033 -1.145 0.252 -0.102  0.027
+Algorithm[T.SPEA2]     0.372    0.033 11.278 0.000  0.308  0.437
+Algorithm[T.ε-MOEA]    0.247    0.033  7.484 0.000  0.182  0.312
+Group Var              0.175    0.361                           
+================================================================

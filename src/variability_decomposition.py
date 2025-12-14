@@ -1,14 +1,3 @@
-"""
-2-Level Variability Decomposition Analysis
-
-This module implements variance decomposition to distinguish:
-- Within-dataset variability: robustness to initial conditions (random seed)
-- Between-dataset variability: generalizability across problem instances
-
-Author: Claude
-Date: 2025-12-13
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,39 +11,12 @@ from pathlib import Path
 
 
 class VariabilityDecomposition:
-    """
-    Analyzes performance variability across datasets and runs.
-
-    Attributes:
-        metrics: List of performance metrics to analyze
-        algorithms: List of algorithm names
-    """
-
     def __init__(self, metrics: List[str] = None, algorithms: List[str] = None):
-        """
-        Initialize the variability decomposition analyzer.
-
-        Args:
-            metrics: List of metrics (default: ['hypervolume', 'spacing', 'diversity',
-                     'convergence', 'execution_time'])
-            algorithms: List of algorithm names (default: ['NSGA-II', 'NSGA-III',
-                        'SPEA2', 'ε-MOEA'])
-        """
-        self.metrics = metrics or ['hypervolume', 'spacing', 'diversity',
-                                   'convergence', 'execution_time']
+        self.metrics = metrics or ['hypervolume', 'spacing', 'diversity', 'convergence', 'execution_time']
         self.algorithms = algorithms or ['NSGA-II', 'NSGA-III', 'SPEA2', 'ε-MOEA']
         self.data = None
 
     def load_all_datasets(self, excel_dir: str) -> pd.DataFrame:
-        """
-        Load all dataset results from Excel files.
-
-        Args:
-            excel_dir: Directory containing optimization result Excel files
-
-        Returns:
-            DataFrame with columns: Algorithm, Dataset, Run, Metric, Value
-        """
         files = sorted([f for f in os.listdir(excel_dir) if f.endswith('.xlsx')])
 
         all_data = []
@@ -78,18 +40,15 @@ class VariabilityDecomposition:
             }
 
             for row in ws.iter_rows(values_only=True):
-                # Check if this is a metric header
                 if row[0] and isinstance(row[0], str):
                     upper_row = row[0].upper()
                     if upper_row in metric_name_map:
                         current_metric = metric_name_map[upper_row]
                         continue
 
-                    # Check if this is the algorithm row header
                     if row[0] == 'Algorithm':
                         continue
 
-                    # This is a data row
                     if current_metric and row[0] in self.algorithms:
                         algorithm = row[0]
                         for run_idx, value in enumerate(row[1:11], 1):  # Runs 1-10
@@ -110,16 +69,6 @@ class VariabilityDecomposition:
         return self.data
 
     def calculate_variance_components(self, algorithm: str, metric: str) -> Dict[str, float]:
-        """
-        Calculate variance components for a given algorithm and metric.
-
-        Args:
-            algorithm: Algorithm name
-            metric: Metric name
-
-        Returns:
-            Dictionary with variance components and ICC
-        """
         # Filter data
         subset = self.data[
             (self.data['Algorithm'] == algorithm) &
@@ -158,12 +107,8 @@ class VariabilityDecomposition:
         total_var = subset['Value'].var(ddof=1)
 
         # Intraclass Correlation Coefficient (ICC)
-        # ICC = Between-group variance / Total variance
-        # Alternative formula: ICC = (MSB - MSW) / (MSB + (k-1)*MSW)
-        # where k is the number of observations per group
         if total_var > 0:
             icc = between_var / total_var
-            # Clamp ICC to [0, 1] range
             icc = max(0.0, min(1.0, icc))
         else:
             icc = 0.0
@@ -179,15 +124,6 @@ class VariabilityDecomposition:
         }
 
     def variance_decomposition_table(self, metric: str) -> pd.DataFrame:
-        """
-        Create variance decomposition table for a specific metric.
-
-        Args:
-            metric: Metric name
-
-        Returns:
-            DataFrame with variance decomposition for all algorithms
-        """
         results = []
 
         for algorithm in self.algorithms:
@@ -203,23 +139,10 @@ class VariabilityDecomposition:
         return pd.DataFrame(results)
 
     def mixed_effects_analysis(self, metric: str) -> Dict:
-        """
-        Perform mixed-effects model analysis.
-
-        Model: Value ~ Algorithm + (1|Dataset)
-
-        Args:
-            metric: Metric name
-
-        Returns:
-            Dictionary with model results
-        """
         # Filter data for this metric
         subset = self.data[self.data['Metric'] == metric].copy()
 
         # Fit mixed-effects model
-        # Fixed effect: Algorithm
-        # Random effect: Dataset
         try:
             model = mixedlm(
                 "Value ~ Algorithm",
@@ -241,15 +164,6 @@ class VariabilityDecomposition:
             return None
 
     def plot_dataset_level_profiles(self, metric: str, save_path: str = None):
-        """
-        Create dataset-level performance profile plot.
-
-        Shows mean performance across datasets with error bars for within-dataset SD.
-
-        Args:
-            metric: Metric name
-            save_path: Path to save the figure (optional)
-        """
         # Filter data
         subset = self.data[self.data['Metric'] == metric].copy()
 
@@ -300,13 +214,6 @@ class VariabilityDecomposition:
         return fig
 
     def plot_variance_components(self, metric: str, save_path: str = None):
-        """
-        Create variance component stacked bar chart.
-
-        Args:
-            metric: Metric name
-            save_path: Path to save the figure (optional)
-        """
         # Calculate variance components for all algorithms
         components_data = []
         for algorithm in self.algorithms:
@@ -373,18 +280,6 @@ class VariabilityDecomposition:
         return fig
 
     def generate_comprehensive_report(self, output_dir: str):
-        """
-        Generate comprehensive variability decomposition report.
-
-        Creates:
-        - Variance decomposition tables for all metrics
-        - Dataset-level performance profiles
-        - Variance component plots
-        - Mixed-effects model summaries
-
-        Args:
-            output_dir: Directory to save outputs
-        """
         os.makedirs(output_dir, exist_ok=True)
 
         print("\n" + "="*80)
